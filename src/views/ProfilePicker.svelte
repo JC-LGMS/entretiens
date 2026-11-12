@@ -24,6 +24,7 @@
 
   async function create(event: SubmitEvent) {
     event.preventDefault()
+    if (busy) return
     if (!name.trim()) {
       error = 'Indiquez un nom.'
       return

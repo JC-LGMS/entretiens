@@ -30,6 +30,7 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - L'ordre de push compte : profils → entités → actions → journaux → historique → silences.
 - Le service worker lit le profil courant dans IndexedDB : `localStorage` est inaccessible dans un SW.
 - Les chemins de photos sont versionnés ; ne pas revenir à `<entity-id>.jpg`.
+- Les noms de profils sont uniques, sans tenir compte de la casse ni des espaces : passer par `createProfile` / `normalizeProfileName`, ne pas créer un profil avec un `saveLocal` direct.
 - Le cron tourne à 07:00 UTC et ne notifie que le jour J.
 - L'accès est un compte partagé, avec inscriptions Supabase désactivées. Les profils ne sont pas authentifiés.
 - `npm run dev` n'enregistre pas le service worker : ne pas en conclure que le push est cassé.
