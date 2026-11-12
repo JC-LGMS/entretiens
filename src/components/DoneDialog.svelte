@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/state.svelte'
   import { saveLocal } from '../lib/db'
-  import { addInterval, formatShort, todayISO } from '../lib/dates'
+  import { addInterval, formatShort, nextAnnualDue, todayISO } from '../lib/dates'
   import type { ActionRow, LogRow } from '../lib/types'
   import Modal from './Modal.svelte'
 
@@ -16,7 +16,13 @@
   let busy = $state(false)
   let error = $state('')
 
-  const nextDue = $derived(doneOn ? addInterval(doneOn, action.interval_value, action.interval_unit) : '')
+  const nextDue = $derived(
+    doneOn
+      ? action.annual_dates?.length
+        ? nextAnnualDue(action.annual_dates, doneOn, false)
+        : addInterval(doneOn, action.interval_value, action.interval_unit)
+      : ''
+  )
 
   async function submit(event: SubmitEvent) {
     event.preventDefault()

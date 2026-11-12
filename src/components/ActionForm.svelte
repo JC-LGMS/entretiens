@@ -3,7 +3,15 @@
   import { app } from '../lib/state.svelte'
   import { recordHistory } from '../lib/history'
   import { saveLocal, softDelete } from '../lib/db'
-  import { addInterval, formatShort, intervalLabel, isDate, todayISO } from '../lib/dates'
+  import {
+    addInterval,
+    annualDatesLabel,
+    formatShort,
+    intervalLabel,
+    isDate,
+    nextAnnualDue,
+    todayISO
+  } from '../lib/dates'
   import { joinSummary, describeChange } from '../lib/summary'
   import { UNITS, type ActionRow, type IntervalUnit } from '../lib/types'
   import Modal from './Modal.svelte'
@@ -14,25 +22,52 @@
     onclose
   }: { entityId: string; action?: ActionRow; onclose: () => void } = $props()
 
+  type Mode = 'interval' | 'annual'
+
   const initial = untrack(() => ({
     label: action?.label ?? '',
     value: action?.interval_value ?? 1,
     unit: action?.interval_unit ?? ('month' as IntervalUnit),
     nextDue: action?.next_due ?? todayISO(),
-    active: action?.active ?? true
+    active: action?.active ?? true,
+    mode: (action?.annual_dates?.length ? 'annual' : 'interval') as Mode,
+    annualDates: [...(action?.annual_dates ?? [])]
   }))
   let label = $state(initial.label)
   let value = $state(initial.value)
   let unit = $state<IntervalUnit>(initial.unit)
   let nextDue = $state(initial.nextDue)
   let active = $state(initial.active)
+  let mode = $state<Mode>(initial.mode)
+  let annualDates = $state<string[]>(initial.annualDates)
   let busy = $state(false)
   let error = $state('')
+
+  const sortedAnnual = $derived([...new Set(annualDates)].sort())
+  const annualNext = $derived.by(() => {
+    if (mode !== 'annual' || sortedAnnual.length === 0) return ''
+    return nextAnnualDue(sortedAnnual, action?.last_done ?? todayISO(), !action?.last_done)
+  })
+  const effectiveNext = $derived(mode === 'annual' ? annualNext : nextDue)
 
   function recalc() {
     if (!action?.last_done) return
     const safe = Number.isFinite(value) && value > 0 ? Math.round(value) : 1
     nextDue = addInterval(action.last_done, safe, unit)
+  }
+
+  function addAnnualDate() {
+    annualDates = [...annualDates, todayISO().slice(5)]
+  }
+
+  function removeAnnualDate(index: number) {
+    annualDates = annualDates.filter((_, i) => i !== index)
+  }
+
+  function setAnnualDate(index: number, value: string) {
+    if (!value) return
+    const md = value.slice(5)
+    annualDates = annualDates.map((date, i) => (i === index ? md : date))
   }
 
   async function submit(event: SubmitEvent) {
@@ -41,11 +76,15 @@
       error = 'Le libellé est obligatoire.'
       return
     }
-    if (!Number.isFinite(value) || value < 1) {
+    if (mode === 'interval' && (!Number.isFinite(value) || value < 1)) {
       error = "L'intervalle doit être supérieur à zéro."
       return
     }
-    if (!isDate(nextDue)) {
+    if (mode === 'annual' && sortedAnnual.length === 0) {
+      error = 'Ajoutez au moins une date dans l’année.'
+      return
+    }
+    if (!isDate(effectiveNext)) {
       error = "La prochaine échéance n'est pas valide."
       return
     }
@@ -53,17 +92,22 @@
     error = ''
     try {
       const now = new Date().toISOString()
+      const intervalValue = mode === 'interval' ? Math.max(1, Math.round(value)) : 1
+      const intervalUnit = mode === 'interval' ? unit : 'year'
+      const dates = mode === 'annual' ? sortedAnnual : []
+
       if (!action) {
         const row: ActionRow = {
           id: crypto.randomUUID(),
           entity_id: entityId,
           label: label.trim(),
-          interval_value: Math.round(value),
-          interval_unit: unit,
+          interval_value: intervalValue,
+          interval_unit: intervalUnit,
           last_done: null,
-          next_due: nextDue,
+          next_due: effectiveNext,
           active: true,
           archived: false,
+          annual_dates: dates,
           notified_for: null,
           updated_at: now,
           deleted_at: null
@@ -74,20 +118,29 @@
         const updated: ActionRow = {
           ...action,
           label: label.trim(),
-          interval_value: Math.round(value),
-          interval_unit: unit,
-          next_due: nextDue,
+          interval_value: intervalValue,
+          interval_unit: intervalUnit,
+          annual_dates: dates,
+          next_due: effectiveNext,
           active,
-          notified_for: nextDue === action.next_due ? action.notified_for : null,
+          notified_for: effectiveNext === action.next_due ? action.notified_for : null,
           updated_at: now
         }
+        const oldMode: Mode = action.annual_dates?.length ? 'annual' : 'interval'
         const summary = joinSummary([
           describeChange('Libellé', action.label, updated.label),
-          describeChange(
-            'Intervalle',
-            intervalLabel(action.interval_value, action.interval_unit),
-            intervalLabel(updated.interval_value, updated.interval_unit)
-          ),
+          oldMode !== mode ? (mode === 'annual' ? 'Mode : dates fixes' : 'Mode : intervalle') : null,
+          mode === 'annual'
+            ? describeChange(
+                'Dates annuelles',
+                oldMode === 'annual' ? annualDatesLabel(action.annual_dates) : '',
+                annualDatesLabel(sortedAnnual)
+              )
+            : describeChange(
+                'Intervalle',
+                intervalLabel(action.interval_value, action.interval_unit),
+                intervalLabel(updated.interval_value, updated.interval_unit)
+              ),
           describeChange('Échéance', formatShort(action.next_due), formatShort(updated.next_due)),
           action.active !== updated.active ? (updated.active ? 'Action réactivée' : 'Action désactivée') : null
         ])
@@ -125,30 +178,68 @@
       <input type="text" bind:value={label} placeholder="Entretien, taille, vidange, document…" required />
     </label>
 
-    <div class="row">
-      <label class="field" style="flex:1">
-        <span>Tous les</span>
-        <input type="number" min="1" bind:value={value} required />
-      </label>
-      <label class="field" style="flex:1">
-        <span>Unité</span>
-        <select bind:value={unit}>
-          {#each UNITS as option}
-            <option value={option.value}>{option.label}</option>
-          {/each}
-        </select>
-      </label>
+    <div class="chips" style="margin-bottom:12px">
+      <button type="button" class="chip" class:active={mode === 'interval'} onclick={() => (mode = 'interval')}>
+        Intervalle
+      </button>
+      <button type="button" class="chip" class:active={mode === 'annual'} onclick={() => (mode = 'annual')}>
+        Dates fixes
+      </button>
     </div>
 
-    <label class="field">
-      <span>Prochaine échéance</span>
-      <input type="date" bind:value={nextDue} required />
-    </label>
+    {#if mode === 'interval'}
+      <div class="row">
+        <label class="field" style="flex:1">
+          <span>Tous les</span>
+          <input type="number" min="1" bind:value={value} required />
+        </label>
+        <label class="field" style="flex:1">
+          <span>Unité</span>
+          <select bind:value={unit}>
+            {#each UNITS as option}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </select>
+        </label>
+      </div>
 
-    {#if action?.last_done}
-      <button type="button" class="btn btn-sm" style="margin-bottom:12px" onclick={recalc}>
-        Calculer depuis le {formatShort(action.last_done)}
-      </button>
+      <label class="field">
+        <span>Prochaine échéance</span>
+        <input type="date" bind:value={nextDue} required />
+      </label>
+
+      {#if action?.last_done}
+        <button type="button" class="btn btn-sm" style="margin-bottom:12px" onclick={recalc}>
+          Calculer depuis le {formatShort(action.last_done)}
+        </button>
+      {/if}
+    {:else}
+      <div class="field">
+        <span>Dates dans l'année</span>
+        {#each annualDates as md, index (index)}
+          <div class="row" style="margin-bottom:6px">
+            <input
+              type="date"
+              value={`2000-${md}`}
+              oninput={(event) => setAnnualDate(index, event.currentTarget.value)}
+            />
+            <button
+              type="button"
+              class="btn icon-btn"
+              aria-label="Retirer cette date"
+              onclick={() => removeAnnualDate(index)}
+            >
+              ✕
+            </button>
+          </div>
+        {/each}
+        <button type="button" class="btn btn-sm" onclick={addAnnualDate}>+ Ajouter une date</button>
+      </div>
+      {#if annualNext}
+        <p class="notice" style="margin-bottom:12px">
+          Prochaine échéance : {formatShort(annualNext)}
+        </p>
+      {/if}
     {/if}
 
     {#if action}

@@ -4,7 +4,6 @@
   import { addInterval, formatShort, intervalLabel, todayISO } from '../lib/dates'
   import { recordHistory } from '../lib/history'
   import { app } from '../lib/state.svelte'
-  import { dueLabel } from '../lib/urgency'
   import { KINDS, type ActionRow, type EntityRow, type HistoryRow, type Kind, type LogRow, type ProfileMuteRow, type ProfileRow } from '../lib/types'
   import ActionForm from '../components/ActionForm.svelte'
   import DoneDialog from '../components/DoneDialog.svelte'
@@ -259,7 +258,7 @@
           <div class="action-meta">
             <span>{intervalLabel(action.interval_value, action.interval_unit)}</span>
             {#if action.last_done}<span>Dernière fois : {formatShort(action.last_done)}</span>{/if}
-            <span>Prochaine : {formatShort(action.next_due)} ({dueLabel(action.next_due)})</span>
+            <span>Prochaine : {formatShort(action.next_due)}</span>
           </div>
           <div class="action-buttons">
             {#if action.active}
@@ -296,7 +295,7 @@
             <div class="action-meta">
               <span>{intervalLabel(action.interval_value, action.interval_unit)}</span>
               {#if action.last_done}<span>Dernière fois : {formatShort(action.last_done)}</span>{/if}
-              <span>Prochaine : {formatShort(action.next_due)} ({dueLabel(action.next_due)})</span>
+              <span>Prochaine : {formatShort(action.next_due)}</span>
             </div>
             <div class="action-buttons">
               <button class="btn btn-sm" onclick={() => (actionForm = { open: true, action })}>Modifier</button>

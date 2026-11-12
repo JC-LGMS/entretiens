@@ -1,11 +1,14 @@
 <script lang="ts">
   import { liveQuery } from 'dexie'
   import { db } from '../lib/db'
+  import { deleteProfile } from '../lib/profiles'
   import { app } from '../lib/state.svelte'
   import type { ProfileRow } from '../lib/types'
 
   let profiles = $state<ProfileRow[]>([])
   let counts = $state<Record<string, { logs: number; history: number }>>({})
+  let busyId = $state<string | null>(null)
+  let error = $state('')
 
   $effect(() => {
     const sub = liveQuery(async () => {
@@ -29,6 +32,19 @@
     })
     return () => sub.unsubscribe()
   })
+
+  async function remove(profile: ProfileRow) {
+    if (!confirm(`Supprimer le profil « ${profile.name} » ?`)) return
+    busyId = profile.id
+    error = ''
+    try {
+      await deleteProfile(profile.id)
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err)
+    } finally {
+      busyId = null
+    }
+  }
 </script>
 
 <a href="#/settings" class="btn btn-ghost btn-sm" style="margin-bottom:10px">← Réglages</a>
@@ -38,6 +54,8 @@
   Tous les profils partagent les mêmes données. L'historique indique ce que chacun a fait.
 </p>
 
+{#if error}<p class="error" style="margin-bottom:12px">{error}</p>{/if}
+
 {#if profiles.length === 0}
   <div class="card empty">
     <p>Aucun profil.</p>
@@ -45,20 +63,32 @@
 {:else}
   <div class="card">
     {#each profiles as profile (profile.id)}
-      <a class="entity-row" href={`#/profile/${profile.id}`}>
-        <span class="avatar">{profile.name.slice(0, 1).toUpperCase()}</span>
-        <div class="entity-main">
-          <strong>
-            {profile.name}
-            {#if app.profileId === profile.id}<span class="badge neutral" style="margin-left:6px">Vous</span>{/if}
-          </strong>
-          <small>
-            {counts[profile.id]?.logs ?? 0} réalisation{(counts[profile.id]?.logs ?? 0) > 1 ? 's' : ''}
-            · {counts[profile.id]?.history ?? 0} modification{(counts[profile.id]?.history ?? 0) > 1 ? 's' : ''}
-          </small>
-        </div>
-        <span class="muted" aria-hidden="true">›</span>
-      </a>
+      <div class="entity-row">
+        <a class="row-link" href={`#/profile/${profile.id}`}>
+          <span class="avatar">{profile.name.slice(0, 1).toUpperCase()}</span>
+          <div class="entity-main">
+            <strong>
+              {profile.name}
+              {#if app.profileId === profile.id}<span class="badge neutral" style="margin-left:6px">Vous</span>{/if}
+            </strong>
+            <small>
+              {counts[profile.id]?.logs ?? 0} réalisation{(counts[profile.id]?.logs ?? 0) > 1 ? 's' : ''}
+              · {counts[profile.id]?.history ?? 0} modification{(counts[profile.id]?.history ?? 0) > 1 ? 's' : ''}
+            </small>
+          </div>
+        </a>
+        {#if (counts[profile.id]?.logs ?? 0) + (counts[profile.id]?.history ?? 0) === 0}
+          <button
+            class="btn btn-sm btn-danger"
+            disabled={busyId === profile.id}
+            onclick={() => remove(profile)}
+          >
+            {busyId === profile.id ? '…' : 'Supprimer'}
+          </button>
+        {:else}
+          <span class="muted" aria-hidden="true">›</span>
+        {/if}
+      </div>
     {/each}
   </div>
 {/if}

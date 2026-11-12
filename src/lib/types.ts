@@ -42,6 +42,7 @@ export interface ActionRow {
   next_due: string
   active: boolean
   archived: boolean
+  annual_dates: string[]
   notified_for: string | null
   updated_at: string
   deleted_at: string | null

@@ -7,10 +7,13 @@
   import { app } from '../lib/state.svelte'
   import { syncNow } from '../lib/sync'
   import { setTheme, themeState, type Theme } from '../lib/theme'
+  import { APP_VERSION } from '../lib/version'
+  import ChangelogDialog from '../components/ChangelogDialog.svelte'
   let push = $state<PushStatus | 'loading'>('loading')
   let pushBusy = $state(false)
   let pushError = $state('')
   let syncBusy = $state(false)
+  let showChangelog = $state(false)
 
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
 
@@ -166,3 +169,14 @@
 <p class="muted tiny" style="text-align:center;margin-top:18px">
   Entretiens · données partagées, synchronisation locale d'abord.
 </p>
+<button
+  class="btn btn-ghost btn-sm"
+  style="margin:6px auto 0;display:flex"
+  onclick={() => (showChangelog = true)}
+>
+  Version {APP_VERSION}
+</button>
+
+{#if showChangelog}
+  <ChangelogDialog onclose={() => (showChangelog = false)} />
+{/if}

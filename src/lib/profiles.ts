@@ -53,3 +53,17 @@ export async function createProfile(name: string): Promise<ProfileRow> {
   await setCurrentProfile(profile.id)
   return profile
 }
+
+export async function deleteProfile(id: string): Promise<void> {
+  const profile = await db.profiles.get(id)
+  if (!profile || profile.deleted_at) return
+  const [logs, history] = await Promise.all([
+    db.logs.filter((log) => log.created_by === id && !log.deleted_at).count(),
+    db.history.filter((row) => row.profile_id === id && !row.deleted_at).count()
+  ])
+  if (logs + history > 0) {
+    throw new Error("Ce profil a de l'activité et ne peut pas être supprimé.")
+  }
+  await saveLocal('profiles', { ...profile, deleted_at: new Date().toISOString() })
+  if (app.profileId === id) await setCurrentProfile(null)
+}

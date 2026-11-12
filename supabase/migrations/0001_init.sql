@@ -41,6 +41,7 @@ create table if not exists public.actions (
   next_due date not null,
   active boolean not null default true,
   archived boolean not null default false,
+  annual_dates jsonb not null default '[]'::jsonb,
   notified_for date,
   updated_at timestamptz not null default now(),
   deleted_at timestamptz

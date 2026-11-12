@@ -4,10 +4,11 @@
   import { formatDate, todayISO } from '../lib/dates'
   import { navigate } from '../lib/router.svelte'
   import { app } from '../lib/state.svelte'
-  import { urgencyOf, dueLabel, URGENCY_LABEL, type Urgency } from '../lib/urgency'
+  import { urgencyOf, URGENCY_LABEL, type Urgency } from '../lib/urgency'
   import { KINDS, type ActionRow, type EntityRow, type Kind } from '../lib/types'
   import ActionForm from '../components/ActionForm.svelte'
   import EntityForm from '../components/EntityForm.svelte'
+  import EntityPhoto from '../components/EntityPhoto.svelte'
   import Modal from '../components/Modal.svelte'
   import UrgencyBadge from '../components/UrgencyBadge.svelte'
 
@@ -88,6 +89,12 @@
     }
     showEntityPicker = true
   }
+
+  function createEntityForAction() {
+    showEntityPicker = false
+    createForAction = true
+    showEntityForm = true
+  }
 </script>
 
 <div class="row between" style="margin-bottom:12px">
@@ -101,8 +108,7 @@
 </div>
 
 <div class="row wrap" style="margin-bottom:14px">
-  <button class="btn btn-sm btn-soft" onclick={() => { createForAction = false; showEntityForm = true }}>＋ Équipement</button>
-  <button class="btn btn-sm btn-soft" onclick={startAction}>＋ Action</button>
+  <button class="btn btn-soft" onclick={startAction}>＋ Ajouter une action</button>
 </div>
 
 {#if groups.length === 0}
@@ -124,7 +130,7 @@
           <div class="entity-main">
             <strong>{item.action.label}</strong>
             <small>
-              {item.entity.name} · {formatDate(item.action.next_due)} ({dueLabel(item.action.next_due)})
+              {item.entity.name} · {formatDate(item.action.next_due)}
               {item.muted ? ' · 🔕 notifications coupées' : ''}
             </small>
           </div>
@@ -162,11 +168,19 @@
             showEntityPicker = false
           }}
         >
-          <span class="avatar">{emojiFor(entity.kind)}</span>
+          <EntityPhoto
+            entityId={entity.id}
+            photoPath={entity.photo_path}
+            kind={entity.kind}
+            alt={entity.name}
+          />
           <span>{entity.name}</span>
         </button>
       {/each}
     </div>
+    <button class="btn btn-soft" style="margin-top:10px;width:100%" onclick={createEntityForAction}>
+      ＋ Créer une nouvelle entité
+    </button>
   </Modal>
 {/if}
 

@@ -12,6 +12,7 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - `npm run check` — Svelte + TypeScript, doit rester à 0 erreur.
 - `npm test` — Vitest en environnement node.
 - Un seul test : `npx vitest run src/lib/dates.test.ts`.
+- `npm run version:bump -- "description"` — incrémente la version de 0.1 et ajoute une entrée au changelog. Le hook `prepare-commit-msg` installé par `prepare` le fait automatiquement quand le commit touche `src/`.
 
 ## Architecture
 
@@ -20,6 +21,8 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - Dexie est la source de vérité locale (`src/lib/db.ts`), Supabase est le backend.
 - `src/lib/sync.ts` pousse l'outbox puis tire les changements par curseur `updated_at`.
 - `src/sw.ts` gère le push et le silence par profil ; `src/lib/theme.ts` gère le thème par appareil.
+- `src/lib/version.ts` expose la version et le changelog ; `src/components/Icon.svelte` contient les icônes SVG de navigation.
+- Les actions ont deux modes : intervalle (`interval_value` / `interval_unit`) ou dates fixes annuelles (`annual_dates`, tableau de `MM-DD`). `next_due` reste la source de vérité pour le planning et le cron.
 
 ## Règles à ne pas casser
 
@@ -27,6 +30,8 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - Les suppressions sont logiques (`deleted_at`). Ne jamais supprimer une ligne en base.
 - L'archivage est distinct de la suppression : `archived` sur les entités et les actions. Le planning exclut les entités/actions archivées et les actions inactives. L'historique est conservé.
 - Le thème est un choix d'appareil stocké dans `localStorage` (`theme`), pas dans Dexie et pas synchronisé.
+- Pour une action à dates fixes, `annual_dates` contient des `MM-DD` triés et `next_due` est recalculé par `nextAnnualDue` ; ne pas stocker l'année dans les dates.
+- Toute modification fonctionnelle de `src/` doit passer par `npm run version:bump -- "..."` (ou le hook Git) pour garder `package.json` et `changelog.json` alignés.
 - `updated_at` est posé par le trigger Postgres. La valeur envoyée par le client est écrasée.
 - `profile_mutes` a une clé composite `(profile_id, entity_id)` et pas d'`id` ; son `onConflict` est `profile_id,entity_id`.
 - L'ordre de push compte : profils → entités → actions → journaux → historique → silences.
@@ -45,7 +50,7 @@ Pour ajouter une colonne à une table existante, créer une nouvelle migration (
 
 ## Tests
 
-Les tests couvrent les échéances (fins de mois, années bissextiles), l'urgence, le filtre de notification, les résumés d'historique et la fusion de l'outbox (`fake-indexeddb/auto`). Toute nouvelle logique de date ou de fusion mérite un test.
+Les tests couvrent les échéances (fins de mois, années bissextiles), les dates fixes annuelles, l'urgence, le filtre de notification, les résumés d'historique, la fusion de l'outbox (`fake-indexeddb/auto`) et la cohérence version/changelog. Toute nouvelle logique de date ou de fusion mérite un test.
 
 ## Variables
 

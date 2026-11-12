@@ -8,6 +8,7 @@
   import { isConfigured } from './lib/supabase'
   import { startSync, syncNow } from './lib/sync'
   import { themeState, toggleTheme } from './lib/theme'
+  import Icon from './components/Icon.svelte'
   import ConfigMissing from './views/ConfigMissing.svelte'
   import Entities from './views/Entities.svelte'
   import EntityDetail from './views/EntityDetail.svelte'
@@ -22,9 +23,14 @@
 
   onMount(() => {
     if (navigator.storage?.persist) void navigator.storage.persist()
-    void initAuth().finally(() => {
-      app.ready = true
-    })
+    void (async () => {
+      try {
+        await initAuth()
+        if (app.session) await loadCurrentProfile()
+      } finally {
+        app.ready = true
+      }
+    })()
     return startSync()
   })
 
@@ -77,10 +83,10 @@
       </div>
 
       <nav class="desktop-nav" aria-label="Navigation">
-        <a href="#/" class:active={route.current.name === 'planning'}>Planning</a>
-        <a href="#/entities" class:active={route.current.name === 'entities'}>Entités</a>
-        <a href="#/profiles" class:active={route.current.name === 'profiles' || route.current.name === 'profile'}>Comptes</a>
-        <a href="#/settings" class:active={route.current.name === 'settings'}>Réglages</a>
+        <a href="#/" class:active={route.current.name === 'planning'}><Icon name="calendar" size={16} /> Planning</a>
+        <a href="#/entities" class:active={route.current.name === 'entities'}><Icon name="entities" size={16} /> Entités</a>
+        <a href="#/profiles" class:active={route.current.name === 'profiles' || route.current.name === 'profile'}><Icon name="users" size={16} /> Comptes</a>
+        <a href="#/settings" class:active={route.current.name === 'settings'}><Icon name="settings" size={16} /> Réglages</a>
       </nav>
 
       <span class={`sync-dot ${app.sync}`} title={syncTitle} aria-label={syncTitle}></span>
@@ -92,7 +98,7 @@
         title={$themeState.resolved === 'dark' ? 'Thème clair' : 'Thème sombre'}
         onclick={toggleTheme}
       >
-        {$themeState.resolved === 'dark' ? '☀️' : '🌙'}
+        <Icon name={$themeState.resolved === 'dark' ? 'sun' : 'moon'} size={20} />
       </button>
 
       <button
@@ -123,15 +129,15 @@
 
     <nav class="bottom-nav" aria-label="Navigation">
       <a href="#/" class:active={route.current.name === 'planning'}>
-        <span aria-hidden="true">📅</span>
+        <Icon name="calendar" size={22} />
         <span>Planning</span>
       </a>
       <a href="#/entities" class:active={route.current.name === 'entities'}>
-        <span aria-hidden="true">🗂️</span>
+        <Icon name="entities" size={22} />
         <span>Entités</span>
       </a>
       <a href="#/settings" class:active={route.current.name === 'settings'}>
-        <span aria-hidden="true">⚙️</span>
+        <Icon name="settings" size={22} />
         <span>Réglages</span>
       </a>
     </nav>

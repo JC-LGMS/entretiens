@@ -1,0 +1,19 @@
+[
+  {
+    "version": "0.2.0",
+    "date": "2026-11-12",
+    "changes": [
+      "Thème accessible depuis l'en-tête, sélection de l'équipement pour une action, dates fixes annuelles, suppression des profils sans activité, icônes modernisées et changelog."
+    ]
+  },
+  {
+    "version": "0.1.0",
+    "date": "2026-11-12",
+    "changes": [
+      "Version initiale : planning, entités, actions, photos et synchronisation hors ligne.",
+      "Profils partagés, historique et notifications push.",
+      "Archivage des entités et des actions.",
+      "Thème clair et sombre."
+    ]
+  }
+]

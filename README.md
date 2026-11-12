@@ -44,7 +44,7 @@ Après toute modification de `.env.local`, arrêter et relancer `npm run dev`.
    - cet email est `VITE_WORKSPACE_EMAIL`
 4. **Authentication** > **Providers** > **Email** : désactiver « Allow new users to sign up ».
 5. **Authentication** > **Settings** : désactiver les connexions anonymes.
-6. **SQL Editor** > **New query** : exécuter les fichiers de `supabase/migrations/` dans l'ordre (`0001_init.sql`, puis `0002_archive.sql`), ou lancer `npx supabase db push`. Sur une base déjà créée, exécuter au minimum `0002_archive.sql`.
+6. **SQL Editor** > **New query** : exécuter les fichiers de `supabase/migrations/` dans l'ordre (`0001_init.sql`, `0002_archive.sql`, `0003_annual_dates.sql`), ou lancer `npx supabase db push`. Sur une base déjà créée, exécuter les migrations manquantes.
 
 La migration crée les tables, les règles RLS, les index et le bucket privé `photos`.
 
@@ -147,15 +147,18 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 
 - Connexion avec le code d'accès Supabase.
 - Création d'un profil.
-- La page d'accueil affiche le planning avec les raccourcis « + Équipement » et « + Action ».
+- La page d'accueil affiche le planning avec le raccourci « + Ajouter une action ».
 - Création d'une entité et d'une action.
+- Le sélecteur d'action affiche les photos et permet de créer une nouvelle entité.
 - Clic sur la photo d'une entité : elle s'affiche en grand.
 - « C'est fait » : le journal et l'historique se mettent à jour.
-- Le planning affiche les échéances avec les couleurs et la date à venir.
+- Le planning affiche les échéances avec les couleurs, la date à venir et le nombre de jours à droite.
+- Une action peut être récurrente par intervalle ou par dates fixes (par exemple 1er mars et 15 octobre).
 - Archiver une action ou une entité : disparition du planning, historique conservé, restauration possible.
 - Le bouton de silence masque le rappel pour le profil courant.
-- Réglages > Comptes et historiques : activité de chaque profil.
-- Thème clair/sombre conservé sur l'appareil.
+- Réglages > Comptes et historiques : activité de chaque profil, suppression des profils sans activité.
+- Thème clair/sombre via l'icône de l'en-tête, conservé sur l'appareil.
+- Réglages > Version : changelog complet.
 - Après un rechargement, les données sont toujours là.
 - En coupant le réseau, une création reste visible ; au retour du réseau, elle se synchronise.
 
@@ -206,18 +209,26 @@ npm run preview   # sert le build (nécessaire pour tester le SW et le push)
 npm run check     # svelte-check + TypeScript
 npm test          # Vitest
 npx vitest run src/lib/dates.test.ts   # un seul fichier de test
+npm run version:bump -- "description"  # incrémente la version de 0.1 et ajoute le changelog
 ```
+
+## Version et changelog
+
+La version affichée dans Réglages vient de `package.json`. `npm run version:bump -- "description"` passe de 0.2 à 0.3 (ou 0.9 à 1.0) et ajoute une entrée dans `src/lib/changelog.json`.
+
+Un hook Git `prepare-commit-msg` est installé par `npm install` (script `prepare`). Il incrémente automatiquement la version quand un commit contient des changements dans `src/`, en utilisant le sujet du commit comme entrée de changelog. Pour le désactiver, supprimer `.git/hooks/prepare-commit-msg`.
 
 ## 11. Fonctionnement
 
 - **Profils déclaratifs** : un seul compte d'accès, plusieurs profils. Le profil courant est stocké dans IndexedDB et sert à signer les journaux et les préférences de notification.
 - **Entités** : équipement, plante ou administratif, avec photo (compressée et stockée dans Supabase Storage). Une entité peut être archivée pour la retirer du planning sans perdre son historique.
-- **Actions** : libellé, intervalle (jours/semaines/mois/années), prochaine échéance. Une action peut être archivée ou désactivée.
-- **Réalisation** : crée un journal, met à jour `last_done` et recalcule `next_due`.
-- **Planning** : page d'accueil, avec raccourcis d'ajout. En retard, aujourd'hui, ≤ 7 jours, plus tard. Le silence par profil masque le rappel push mais laisse l'échéance visible.
-- **Historique** : fusion des réalisations et des modifications, avec le profil auteur. Réglages > Comptes et historiques permet de consulter l'activité de chaque profil.
-- **Photos** : un clic sur la photo d'une entité l'ouvre en grand.
-- **Thème** : clair, sombre ou système, enregistré par appareil dans le navigateur.
+- **Actions** : libellé, récurrence par intervalle (jours/semaines/mois/années) ou par dates fixes dans l'année (1er mars, 15 octobre…), prochaine échéance. Une action peut être archivée ou désactivée.
+- **Réalisation** : crée un journal, met à jour `last_done` et recalcule `next_due` (intervalle ou prochaine date fixe).
+- **Planning** : page d'accueil, avec le raccourci d'ajout d'action. En retard, aujourd'hui, ≤ 7 jours, plus tard. Le silence par profil masque le rappel push mais laisse l'échéance visible.
+- **Historique** : fusion des réalisations et des modifications, avec le profil auteur. Réglages > Comptes et historiques permet de consulter l'activité de chaque profil et de supprimer un profil sans activité.
+- **Photos** : un clic sur la photo d'une entité l'ouvre en grand ; les photos apparaissent dans le sélecteur d'action.
+- **Thème** : icône clair/sombre dans l'en-tête, ou Système/Clair/Sombre dans Réglages, enregistré par appareil.
+- **Version** : numéro affiché dans Réglages, changelog de toutes les versions au clic.
 - **Hors ligne** : toutes les écritures vont dans IndexedDB puis dans une file `outbox`.
 
 ## 12. Synchronisation
