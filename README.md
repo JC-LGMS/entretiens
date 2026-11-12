@@ -218,7 +218,7 @@ npm run version:bump -- "description"  # incrémente la version de 0.1 et ajoute
 
 La version affichée dans Réglages vient de `package.json`. `npm run version:bump -- "description"` passe de 0.2 à 0.3 (ou 0.9 à 1.0) et ajoute une entrée dans `src/lib/changelog.json`.
 
-Un hook Git `prepare-commit-msg` est installé par `npm install` (script `prepare`). Il incrémente automatiquement la version quand un commit contient des changements dans `src/`, en utilisant le sujet du commit comme entrée de changelog. Pour le désactiver, supprimer `.git/hooks/prepare-commit-msg`.
+Un hook Git `pre-commit` est installé par `npm install` (script `prepare`). Il incrémente automatiquement la version quand un commit contient des changements dans `src/`, avec le message `Mise à jour de l'application` ou la valeur de `VERSION_MESSAGE`. Pour le désactiver, supprimer `.git/hooks/pre-commit`.
 
 ## 11. Fonctionnement
 

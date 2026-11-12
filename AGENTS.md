@@ -12,7 +12,7 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - `npm run check` — Svelte + TypeScript, doit rester à 0 erreur.
 - `npm test` — Vitest en environnement node.
 - Un seul test : `npx vitest run src/lib/dates.test.ts`.
-- `npm run version:bump -- "description"` — incrémente la version de 0.1 et ajoute une entrée au changelog. Le hook `prepare-commit-msg` installé par `prepare` le fait automatiquement quand le commit touche `src/`.
+- `npm run version:bump -- "description"` — incrémente la version de 0.1 et ajoute une entrée au changelog. Le hook `pre-commit` installé par `prepare` le fait automatiquement quand le commit touche `src/` (message via `VERSION_MESSAGE` ou valeur par défaut).
 
 ## Architecture
 
