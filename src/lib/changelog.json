@@ -1,9 +1,15 @@
 [
   {
     "version": "0.3.0",
-    "date": "2026-11-12",
+    "date": "2026-11-13",
     "changes": [
-      "Description d'action, historique séparé et corrections d'affichage"
+      "Description libre sur les actions.",
+      "Historique séparé entre réalisations et modifications.",
+      "Correction de l'erreur IndexedDB lors de « C'est fait ».",
+      "Bouton d'ajout mobile en FAB et bouton desktop visible sur Planning et Entités.",
+      "Date et nombre de jours regroupés à droite dans le planning.",
+      "Unité d'intervalle par défaut : an ; deux dates préremplies en mode dates fixes.",
+      "Nom de l'entité affiché dans la modale d'action."
     ]
   },
   {
