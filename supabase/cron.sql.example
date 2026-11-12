@@ -1,0 +1,21 @@
+-- À exécuter une fois dans le SQL Editor Supabase après avoir déployé la fonction.
+-- Remplacez PROJECT_REF et CRON_SECRET avant exécution.
+--
+-- 1. Activez pg_cron et pg_net dans Database > Extensions.
+-- 2. Exécutez ce bloc.
+-- 3. Vérifiez : select * from cron.job;
+
+select cron.schedule(
+  'entretiens-reminders',
+  '0 7 * * *',
+  $$
+  select net.http_post(
+    url := 'https://PROJECT_REF.supabase.co/functions/v1/send-reminders',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-cron-secret', 'CRON_SECRET'
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
