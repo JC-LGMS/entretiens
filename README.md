@@ -79,11 +79,11 @@ Relancer `npm run dev`. Le premier écran demande le **code d'accès** : c'est l
 ## 6. Déployer la fonction et le cron Supabase
 
 ```bash
-npx supabase functions deploy send-reminders --project-ref <PROJECT_REF>
-npx supabase secrets set --project-ref <PROJECT_REF> CRON_SECRET=<secret-long> VAPID_SUBJECT=mailto:<email> VAPID_PUBLIC_KEY=<clé-publique> VAPID_PRIVATE_KEY=<clé-privée>
+npx supabase functions deploy send-reminders --remote=<PROJECT_REF> --use-api --no-verify-jwt
+npx supabase secrets set --remote=<PROJECT_REF> CRON_SECRET=<secret-long> VAPID_SUBJECT=mailto:<email> VAPID_PUBLIC_KEY=<clé-publique> VAPID_PRIVATE_KEY=<clé-privée>
 ```
 
-`supabase/config.toml` désactive la vérification JWT de la fonction. Si votre CLI l'ignore, ajoutez `--no-verify-jwt` à la commande de déploiement.
+`--use-api` évite de dépendre de Docker. `supabase/config.toml` désactive déjà la vérification JWT de la fonction ; `--no-verify-jwt` le rend explicite.
 
 Activer les extensions `pg_cron` et `pg_net`, puis exécuter `supabase/cron.sql.example` dans le SQL Editor en remplaçant `PROJECT_REF` et `CRON_SECRET`. Le rappel part à **07:00 UTC** ; la date de référence du « jour J » est donc en UTC.
 
