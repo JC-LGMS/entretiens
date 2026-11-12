@@ -36,6 +36,7 @@ export interface ActionRow {
   id: string
   entity_id: string
   label: string
+  description: string
   interval_value: number
   interval_unit: IntervalUnit
   last_done: string | null

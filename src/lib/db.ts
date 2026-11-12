@@ -63,6 +63,11 @@ export function tableFor(table: SyncTable): Table<any, any> {
   return (db as unknown as Record<string, Table<any, any>>)[dexieNames[table]]
 }
 
+function toPlain<T>(value: T): T {
+  // Dexie ne peut pas cloner les proxys réactifs de Svelte ($state).
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 export async function queueOutbox(
   table: SyncTable,
   rowId: string,
@@ -82,17 +87,19 @@ function notifyLocalChange(): void {
 
 export async function saveLocal<T extends { id: string }>(table: SyncTable, row: T): Promise<void> {
   const dexieTable = tableFor(table)
+  const plain = toPlain(row)
   await db.transaction('rw', dexieTable, db.outbox, async () => {
-    await dexieTable.put(row)
-    await queueOutbox(table, row.id, row as unknown as Record<string, unknown>)
+    await dexieTable.put(plain)
+    await queueOutbox(table, plain.id, plain as unknown as Record<string, unknown>)
   })
   notifyLocalChange()
 }
 
 export async function saveMute(row: ProfileMuteRow): Promise<void> {
+  const plain = toPlain(row)
   await db.transaction('rw', db.profileMutes, db.outbox, async () => {
-    await db.profileMutes.put(row)
-    await queueOutbox('profile_mutes', `${row.profile_id}:${row.entity_id}`, row as unknown as Record<string, unknown>)
+    await db.profileMutes.put(plain)
+    await queueOutbox('profile_mutes', `${plain.profile_id}:${plain.entity_id}`, plain as unknown as Record<string, unknown>)
   })
   notifyLocalChange()
 }

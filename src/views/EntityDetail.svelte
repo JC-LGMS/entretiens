@@ -34,6 +34,7 @@
   })
   let showEntityForm = $state(false)
   let showArchivedActions = $state(false)
+  let showModifications = $state(false)
   let actionForm = $state<{ open: boolean; action?: ActionRow }>({ open: false })
   let doneAction = $state<ActionRow | null>(null)
 
@@ -71,32 +72,34 @@
   const visibleActions = $derived(data.actions.filter((action) => !action.archived))
   const archivedActions = $derived(data.actions.filter((action) => action.archived))
 
-  const timeline = $derived.by(() => {
+  const realisations = $derived.by(() => {
     const labels = new Map(data.allActions.map((a) => [a.id, a.label]))
     const names = new Map(data.profiles.map((p) => [p.id, p.name]))
-    const entries: { id: string; at: string; title: string; text: string; who: string }[] = []
-
-    for (const log of data.logs) {
-      if (log.deleted_at) continue
-      entries.push({
+    return data.logs
+      .filter((log) => !log.deleted_at)
+      .map((log) => ({
         id: log.id,
         at: new Date(`${log.done_on}T12:00:00`).toISOString(),
         title: `Action « ${labels.get(log.action_id) ?? 'supprimée'} » faite`,
         text: log.comment,
         who: names.get(log.created_by ?? '') ?? ''
-      })
-    }
-    for (const row of data.history) {
-      if (row.deleted_at) continue
-      entries.push({
+      }))
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .slice(0, 80)
+  })
+
+  const modifications = $derived.by(() => {
+    const names = new Map(data.profiles.map((p) => [p.id, p.name]))
+    return data.history
+      .filter((row) => !row.deleted_at)
+      .map((row) => ({
         id: row.id,
         at: row.created_at,
         title: row.summary,
-        text: '',
         who: names.get(row.profile_id ?? '') ?? ''
-      })
-    }
-    return entries.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 80)
+      }))
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .slice(0, 80)
   })
 
   function kindLabel(kind: Kind): string {
@@ -255,6 +258,7 @@
               <span class="badge neutral">Inactive</span>
             {/if}
           </div>
+          {#if action.description}<p class="muted tiny" style="margin-top:4px">{action.description}</p>{/if}
           <div class="action-meta">
             <span>{intervalLabel(action.interval_value, action.interval_unit)}</span>
             {#if action.last_done}<span>Dernière fois : {formatShort(action.last_done)}</span>{/if}
@@ -308,15 +312,15 @@
   {/if}
 
   <div class="section-title">
-    <h2>Historique</h2>
+    <h2>Réalisations</h2>
   </div>
 
-  {#if timeline.length === 0}
-    <div class="card empty"><p>Rien à afficher pour le moment.</p></div>
+  {#if realisations.length === 0}
+    <div class="card empty"><p>Aucune réalisation enregistrée.</p></div>
   {:else}
     <div class="card card-pad">
       <div class="timeline">
-        {#each timeline as entry (entry.id)}
+        {#each realisations as entry (entry.id)}
           <div class="timeline-item">
             <div class="when">{when(entry.at)}{entry.who ? ` · ${entry.who}` : ''}</div>
             <p>{entry.title}</p>
@@ -325,6 +329,28 @@
         {/each}
       </div>
     </div>
+  {/if}
+
+  {#if modifications.length > 0}
+    <div class="section-title">
+      <h2>Modifications</h2>
+      <button class="btn btn-sm btn-ghost" onclick={() => (showModifications = !showModifications)}>
+        {showModifications ? 'Masquer' : `${modifications.length}`}
+      </button>
+    </div>
+
+    {#if showModifications}
+      <div class="card card-pad">
+        <div class="timeline">
+          {#each modifications as entry (entry.id)}
+            <div class="timeline-item">
+              <div class="when">{when(entry.at)}{entry.who ? ` · ${entry.who}` : ''}</div>
+              <p>{entry.title}</p>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
   {/if}
 {/if}
 
@@ -335,6 +361,7 @@
 {#if actionForm.open}
   <ActionForm
     entityId={id}
+    entityName={data.entity?.name}
     action={actionForm.action}
     onclose={() => (actionForm = { open: false })}
   />

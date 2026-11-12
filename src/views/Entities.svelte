@@ -59,6 +59,11 @@
   }
 </script>
 
+<div class="row between" style="margin-bottom:12px">
+  <h1>Entités</h1>
+  <button class="btn btn-sm btn-primary desktop-add" onclick={() => (showForm = true)}>＋ Ajouter</button>
+</div>
+
 <div class="row" style="margin-bottom:12px">
   <div class="search">
     <span aria-hidden="true">🔎</span>
@@ -121,7 +126,7 @@
   </div>
 {/if}
 
-<button class="fab" aria-label="Ajouter une entité" onclick={() => (showForm = true)}>＋</button>
+<button class="fab mobile-only" aria-label="Ajouter une entité" onclick={() => (showForm = true)}>＋</button>
 
 {#if showForm}
   <EntityForm

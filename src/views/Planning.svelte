@@ -1,7 +1,7 @@
 <script lang="ts">
   import { liveQuery } from 'dexie'
   import { db } from '../lib/db'
-  import { formatDate, todayISO } from '../lib/dates'
+  import { formatDate, formatShort, todayISO } from '../lib/dates'
   import { navigate } from '../lib/router.svelte'
   import { app } from '../lib/state.svelte'
   import { urgencyOf, URGENCY_LABEL, type Urgency } from '../lib/urgency'
@@ -23,6 +23,7 @@
   let showEntityForm = $state(false)
   let showEntityPicker = $state(false)
   let actionEntityId = $state<string | null>(null)
+  let actionEntityName = $state('')
   let createForAction = $state(false)
 
   $effect(() => {
@@ -105,11 +106,10 @@
       {overdueCount ? ` · ${overdueCount} en retard` : ''}
     </p>
   </div>
+  <button class="btn btn-sm btn-primary desktop-add" onclick={startAction}>＋ Action</button>
 </div>
 
-<div class="row wrap" style="margin-bottom:14px">
-  <button class="btn btn-soft" onclick={startAction}>＋ Ajouter une action</button>
-</div>
+<button class="fab mobile-only" aria-label="Ajouter une action" onclick={startAction}>＋</button>
 
 {#if groups.length === 0}
   <div class="card empty">
@@ -129,12 +129,12 @@
           <div class="thumb" aria-hidden="true">{emojiFor(item.entity.kind)}</div>
           <div class="entity-main">
             <strong>{item.action.label}</strong>
-            <small>
-              {item.entity.name} · {formatDate(item.action.next_due)}
-              {item.muted ? ' · 🔕 notifications coupées' : ''}
-            </small>
+            <small>{item.entity.name}{item.muted ? ' · 🔕 notifications coupées' : ''}</small>
           </div>
-          <UrgencyBadge nextDue={item.action.next_due} />
+          <div class="due-right">
+            <UrgencyBadge nextDue={item.action.next_due} />
+            <span class="tiny muted">{formatShort(item.action.next_due)}</span>
+          </div>
         </a>
       {/each}
     </div>
@@ -148,6 +148,7 @@
       showEntityForm = false
       if (createForAction) {
         actionEntityId = entity.id
+        actionEntityName = entity.name
         createForAction = false
       } else {
         navigate(`/entity/${entity.id}`)
@@ -165,6 +166,7 @@
           class="profile-option"
           onclick={() => {
             actionEntityId = entity.id
+            actionEntityName = entity.name
             showEntityPicker = false
           }}
         >
@@ -185,5 +187,12 @@
 {/if}
 
 {#if actionEntityId}
-  <ActionForm entityId={actionEntityId} onclose={() => (actionEntityId = null)} />
+  <ActionForm
+    entityId={actionEntityId}
+    entityName={actionEntityName}
+    onclose={() => {
+      actionEntityId = null
+      actionEntityName = ''
+    }}
+  />
 {/if}

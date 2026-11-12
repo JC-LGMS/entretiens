@@ -60,6 +60,7 @@
 <Modal title="Noter une réalisation" {onclose}>
   <form onsubmit={submit}>
     <p class="muted" style="margin-bottom:12px">{entityName} · {action.label}</p>
+    {#if action.description}<p class="muted tiny" style="margin:-6px 0 12px">{action.description}</p>{/if}
 
     <label class="field">
       <span>Date</span>

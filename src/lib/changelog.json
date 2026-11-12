@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.0",
+    "date": "2026-11-12",
+    "changes": [
+      "Description d'action, historique séparé et corrections d'affichage"
+    ]
+  },
+  {
     "version": "0.2.0",
     "date": "2026-11-12",
     "changes": [

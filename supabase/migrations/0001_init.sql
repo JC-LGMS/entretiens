@@ -35,6 +35,7 @@ create table if not exists public.actions (
   id uuid primary key,
   entity_id uuid not null references public.entities(id),
   label text not null,
+  description text not null default '',
   interval_value integer not null check (interval_value > 0),
   interval_unit text not null check (interval_unit in ('day', 'week', 'month', 'year')),
   last_done date,

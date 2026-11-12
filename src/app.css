@@ -688,6 +688,17 @@ textarea {
   box-shadow: var(--shadow);
 }
 
+.desktop-add {
+  display: none;
+}
+
+.due-right {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  text-align: right;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -877,6 +888,14 @@ textarea {
 
   .desktop-nav {
     display: flex;
+  }
+
+  .desktop-add {
+    display: inline-flex;
+  }
+
+  .fab.mobile-only {
+    display: none;
   }
 
   .fab {

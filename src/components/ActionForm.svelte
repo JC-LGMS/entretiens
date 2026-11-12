@@ -18,22 +18,25 @@
 
   let {
     entityId,
+    entityName,
     action,
     onclose
-  }: { entityId: string; action?: ActionRow; onclose: () => void } = $props()
+  }: { entityId: string; entityName?: string; action?: ActionRow; onclose: () => void } = $props()
 
   type Mode = 'interval' | 'annual'
 
   const initial = untrack(() => ({
     label: action?.label ?? '',
+    description: action?.description ?? '',
     value: action?.interval_value ?? 1,
-    unit: action?.interval_unit ?? ('month' as IntervalUnit),
+    unit: action?.interval_unit ?? ('year' as IntervalUnit),
     nextDue: action?.next_due ?? todayISO(),
     active: action?.active ?? true,
     mode: (action?.annual_dates?.length ? 'annual' : 'interval') as Mode,
     annualDates: [...(action?.annual_dates ?? [])]
   }))
   let label = $state(initial.label)
+  let description = $state(initial.description)
   let value = $state(initial.value)
   let unit = $state<IntervalUnit>(initial.unit)
   let nextDue = $state(initial.nextDue)
@@ -42,6 +45,26 @@
   let annualDates = $state<string[]>(initial.annualDates)
   let busy = $state(false)
   let error = $state('')
+
+  const displayYear = new Date().getFullYear()
+
+  function annualInputValue(md: string): string {
+    const leap = new Date(displayYear, 1, 29).getMonth() === 1
+    const year = md === '02-29' && !leap ? 2000 : displayYear
+    return `${year}-${md}`
+  }
+
+  function defaultAnnualDates(): string[] {
+    const start = todayISO()
+    return [start.slice(5), addInterval(start, 6, 'month').slice(5)]
+  }
+
+  function selectMode(next: Mode) {
+    mode = next
+    if (next === 'annual' && annualDates.length === 0) {
+      annualDates = defaultAnnualDates()
+    }
+  }
 
   const sortedAnnual = $derived([...new Set(annualDates)].sort())
   const annualNext = $derived.by(() => {
@@ -101,6 +124,7 @@
           id: crypto.randomUUID(),
           entity_id: entityId,
           label: label.trim(),
+          description: description.trim(),
           interval_value: intervalValue,
           interval_unit: intervalUnit,
           last_done: null,
@@ -118,6 +142,7 @@
         const updated: ActionRow = {
           ...action,
           label: label.trim(),
+          description: description.trim(),
           interval_value: intervalValue,
           interval_unit: intervalUnit,
           annual_dates: dates,
@@ -129,6 +154,7 @@
         const oldMode: Mode = action.annual_dates?.length ? 'annual' : 'interval'
         const summary = joinSummary([
           describeChange('Libellé', action.label, updated.label),
+          describeChange('Description', action.description, updated.description),
           oldMode !== mode ? (mode === 'annual' ? 'Mode : dates fixes' : 'Mode : intervalle') : null,
           mode === 'annual'
             ? describeChange(
@@ -173,16 +199,25 @@
 
 <Modal title={action ? "Modifier l'action" : 'Nouvelle action'} {onclose}>
   <form onsubmit={submit}>
+    {#if entityName}
+      <p class="notice" style="margin-bottom:12px">Entité : <strong>{entityName}</strong></p>
+    {/if}
+
     <label class="field">
       <span>Libellé</span>
       <input type="text" bind:value={label} placeholder="Entretien, taille, vidange, document…" required />
     </label>
 
+    <label class="field">
+      <span>Description</span>
+      <textarea bind:value={description} placeholder="Détails, produit, référence…"></textarea>
+    </label>
+
     <div class="chips" style="margin-bottom:12px">
-      <button type="button" class="chip" class:active={mode === 'interval'} onclick={() => (mode = 'interval')}>
+      <button type="button" class="chip" class:active={mode === 'interval'} onclick={() => selectMode('interval')}>
         Intervalle
       </button>
-      <button type="button" class="chip" class:active={mode === 'annual'} onclick={() => (mode = 'annual')}>
+      <button type="button" class="chip" class:active={mode === 'annual'} onclick={() => selectMode('annual')}>
         Dates fixes
       </button>
     </div>
@@ -220,7 +255,7 @@
           <div class="row" style="margin-bottom:6px">
             <input
               type="date"
-              value={`2000-${md}`}
+              value={annualInputValue(md)}
               oninput={(event) => setAnnualDate(index, event.currentTarget.value)}
             />
             <button
