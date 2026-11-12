@@ -6,13 +6,11 @@
   import { navigate } from '../lib/router.svelte'
   import { app } from '../lib/state.svelte'
   import { syncNow } from '../lib/sync'
-  import { getTheme, setTheme, type Theme } from '../lib/theme'
-
+  import { setTheme, themeState, type Theme } from '../lib/theme'
   let push = $state<PushStatus | 'loading'>('loading')
   let pushBusy = $state(false)
   let pushError = $state('')
   let syncBusy = $state(false)
-  let theme = $state<Theme>(getTheme())
 
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
 
@@ -50,7 +48,6 @@
   }
 
   function chooseTheme(next: Theme) {
-    theme = next
     setTheme(next)
   }
 
@@ -107,9 +104,9 @@
 <div class="section-title"><h2>Apparence</h2></div>
 <div class="card card-pad">
   <div class="chips">
-    <button class="chip" class:active={theme === 'system'} onclick={() => chooseTheme('system')}>Système</button>
-    <button class="chip" class:active={theme === 'light'} onclick={() => chooseTheme('light')}>Clair</button>
-    <button class="chip" class:active={theme === 'dark'} onclick={() => chooseTheme('dark')}>Sombre</button>
+    <button class="chip" class:active={$themeState.mode === 'system'} onclick={() => chooseTheme('system')}>Système</button>
+    <button class="chip" class:active={$themeState.mode === 'light'} onclick={() => chooseTheme('light')}>Clair</button>
+    <button class="chip" class:active={$themeState.mode === 'dark'} onclick={() => chooseTheme('dark')}>Sombre</button>
   </div>
   <p class="muted tiny" style="margin-top:8px">Choix enregistré sur cet appareil.</p>
 </div>

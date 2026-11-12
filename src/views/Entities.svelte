@@ -2,6 +2,8 @@
   import { liveQuery } from 'dexie'
   import { db } from '../lib/db'
   import { navigate } from '../lib/router.svelte'
+  import { formatShort } from '../lib/dates'
+  import { dueLabel } from '../lib/urgency'
   import { KINDS, type ActionRow, type EntityRow, type Kind } from '../lib/types'
   import EntityForm from '../components/EntityForm.svelte'
   import EntityPhoto from '../components/EntityPhoto.svelte'
@@ -103,7 +105,9 @@
         <div class="entity-main">
           <strong>{row.entity.name}</strong>
           <small>
-            {kindLabel(row.entity.kind)}{row.entity.archived ? ' · archivé' : ''}{row.entity.notes
+            {kindLabel(row.entity.kind)}{row.entity.archived ? ' · archivé' : ''}{row.next
+              ? ` · prochaine : ${formatShort(row.next.next_due)} (${dueLabel(row.next.next_due)})`
+              : ''}{row.entity.notes
               ? ` · ${row.entity.notes}`
               : ''}
           </small>

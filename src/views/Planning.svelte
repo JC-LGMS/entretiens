@@ -4,7 +4,7 @@
   import { formatDate, todayISO } from '../lib/dates'
   import { navigate } from '../lib/router.svelte'
   import { app } from '../lib/state.svelte'
-  import { urgencyOf, URGENCY_LABEL, type Urgency } from '../lib/urgency'
+  import { urgencyOf, dueLabel, URGENCY_LABEL, type Urgency } from '../lib/urgency'
   import { KINDS, type ActionRow, type EntityRow, type Kind } from '../lib/types'
   import ActionForm from '../components/ActionForm.svelte'
   import EntityForm from '../components/EntityForm.svelte'
@@ -22,6 +22,7 @@
   let showEntityForm = $state(false)
   let showEntityPicker = $state(false)
   let actionEntityId = $state<string | null>(null)
+  let createForAction = $state(false)
 
   $effect(() => {
     const profileId = app.profileId
@@ -81,11 +82,8 @@
 
   function startAction() {
     if (entities.length === 0) {
+      createForAction = true
       showEntityForm = true
-      return
-    }
-    if (entities.length === 1) {
-      actionEntityId = entities[0].id
       return
     }
     showEntityPicker = true
@@ -103,7 +101,7 @@
 </div>
 
 <div class="row wrap" style="margin-bottom:14px">
-  <button class="btn btn-sm btn-soft" onclick={() => (showEntityForm = true)}>＋ Équipement</button>
+  <button class="btn btn-sm btn-soft" onclick={() => { createForAction = false; showEntityForm = true }}>＋ Équipement</button>
   <button class="btn btn-sm btn-soft" onclick={startAction}>＋ Action</button>
 </div>
 
@@ -126,7 +124,7 @@
           <div class="entity-main">
             <strong>{item.action.label}</strong>
             <small>
-              {item.entity.name} · {formatDate(item.action.next_due)}
+              {item.entity.name} · {formatDate(item.action.next_due)} ({dueLabel(item.action.next_due)})
               {item.muted ? ' · 🔕 notifications coupées' : ''}
             </small>
           </div>
@@ -140,7 +138,15 @@
 {#if showEntityForm}
   <EntityForm
     onclose={() => (showEntityForm = false)}
-    onsaved={(entity) => navigate(`/entity/${entity.id}`)}
+    onsaved={(entity) => {
+      showEntityForm = false
+      if (createForAction) {
+        actionEntityId = entity.id
+        createForAction = false
+      } else {
+        navigate(`/entity/${entity.id}`)
+      }
+    }}
   />
 {/if}
 

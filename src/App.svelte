@@ -7,6 +7,7 @@
   import { app } from './lib/state.svelte'
   import { isConfigured } from './lib/supabase'
   import { startSync, syncNow } from './lib/sync'
+  import { themeState, toggleTheme } from './lib/theme'
   import ConfigMissing from './views/ConfigMissing.svelte'
   import Entities from './views/Entities.svelte'
   import EntityDetail from './views/EntityDetail.svelte'
@@ -83,6 +84,16 @@
       </nav>
 
       <span class={`sync-dot ${app.sync}`} title={syncTitle} aria-label={syncTitle}></span>
+
+      <button
+        class="btn icon-btn"
+        style="border-color:transparent;background:transparent"
+        aria-label={$themeState.resolved === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre'}
+        title={$themeState.resolved === 'dark' ? 'Thème clair' : 'Thème sombre'}
+        onclick={toggleTheme}
+      >
+        {$themeState.resolved === 'dark' ? '☀️' : '🌙'}
+      </button>
 
       <button
         class="btn icon-btn"
