@@ -44,7 +44,7 @@ Après toute modification de `.env.local`, arrêter et relancer `npm run dev`.
    - cet email est `VITE_WORKSPACE_EMAIL`
 4. **Authentication** > **Providers** > **Email** : désactiver « Allow new users to sign up ».
 5. **Authentication** > **Settings** : désactiver les connexions anonymes.
-6. **SQL Editor** > **New query** : coller tout le contenu de `supabase/migrations/0001_init.sql`, puis **Run**.
+6. **SQL Editor** > **New query** : exécuter les fichiers de `supabase/migrations/` dans l'ordre (`0001_init.sql`, puis `0002_archive.sql`), ou lancer `npx supabase db push`. Sur une base déjà créée, exécuter au minimum `0002_archive.sql`.
 
 La migration crée les tables, les règles RLS, les index et le bucket privé `photos`.
 
@@ -147,10 +147,15 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 
 - Connexion avec le code d'accès Supabase.
 - Création d'un profil.
+- La page d'accueil affiche le planning avec les raccourcis « + Équipement » et « + Action ».
 - Création d'une entité et d'une action.
+- Clic sur la photo d'une entité : elle s'affiche en grand.
 - « C'est fait » : le journal et l'historique se mettent à jour.
-- Le planning affiche les échéances avec les couleurs.
+- Le planning affiche les échéances avec les couleurs et la date à venir.
+- Archiver une action ou une entité : disparition du planning, historique conservé, restauration possible.
 - Le bouton de silence masque le rappel pour le profil courant.
+- Réglages > Comptes et historiques : activité de chaque profil.
+- Thème clair/sombre conservé sur l'appareil.
 - Après un rechargement, les données sont toujours là.
 - En coupant le réseau, une création reste visible ; au retour du réseau, elle se synchronise.
 
@@ -206,11 +211,13 @@ npx vitest run src/lib/dates.test.ts   # un seul fichier de test
 ## 11. Fonctionnement
 
 - **Profils déclaratifs** : un seul compte d'accès, plusieurs profils. Le profil courant est stocké dans IndexedDB et sert à signer les journaux et les préférences de notification.
-- **Entités** : équipement, plante ou administratif, avec photo (compressée et stockée dans Supabase Storage).
-- **Actions** : libellé, intervalle (jours/semaines/mois/années), prochaine échéance.
+- **Entités** : équipement, plante ou administratif, avec photo (compressée et stockée dans Supabase Storage). Une entité peut être archivée pour la retirer du planning sans perdre son historique.
+- **Actions** : libellé, intervalle (jours/semaines/mois/années), prochaine échéance. Une action peut être archivée ou désactivée.
 - **Réalisation** : crée un journal, met à jour `last_done` et recalcule `next_due`.
-- **Planning** : en retard, aujourd'hui, ≤ 7 jours, plus tard. Le silence par profil masque le rappel push mais laisse l'échéance visible.
-- **Historique** : fusion des réalisations et des modifications, avec le profil auteur.
+- **Planning** : page d'accueil, avec raccourcis d'ajout. En retard, aujourd'hui, ≤ 7 jours, plus tard. Le silence par profil masque le rappel push mais laisse l'échéance visible.
+- **Historique** : fusion des réalisations et des modifications, avec le profil auteur. Réglages > Comptes et historiques permet de consulter l'activité de chaque profil.
+- **Photos** : un clic sur la photo d'une entité l'ouvre en grand.
+- **Thème** : clair, sombre ou système, enregistré par appareil dans le navigateur.
 - **Hors ligne** : toutes les écritures vont dans IndexedDB puis dans une file `outbox`.
 
 ## 12. Synchronisation

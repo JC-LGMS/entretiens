@@ -26,6 +26,7 @@ create table if not exists public.entities (
   name text not null,
   notes text not null default '',
   photo_path text,
+  archived boolean not null default false,
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
@@ -39,6 +40,7 @@ create table if not exists public.actions (
   last_done date,
   next_due date not null,
   active boolean not null default true,
+  archived boolean not null default false,
   notified_for date,
   updated_at timestamptz not null default now(),
   deleted_at timestamptz

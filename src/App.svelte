@@ -12,7 +12,9 @@
   import EntityDetail from './views/EntityDetail.svelte'
   import Login from './views/Login.svelte'
   import Planning from './views/Planning.svelte'
+  import ProfileHistory from './views/ProfileHistory.svelte'
   import ProfilePicker from './views/ProfilePicker.svelte'
+  import Profiles from './views/Profiles.svelte'
   import Settings from './views/Settings.svelte'
 
   let started = false
@@ -74,8 +76,9 @@
       </div>
 
       <nav class="desktop-nav" aria-label="Navigation">
-        <a href="#/" class:active={route.current.name === 'entities'}>Entités</a>
-        <a href="#/planning" class:active={route.current.name === 'planning'}>Planning</a>
+        <a href="#/" class:active={route.current.name === 'planning'}>Planning</a>
+        <a href="#/entities" class:active={route.current.name === 'entities'}>Entités</a>
+        <a href="#/profiles" class:active={route.current.name === 'profiles' || route.current.name === 'profile'}>Comptes</a>
         <a href="#/settings" class:active={route.current.name === 'settings'}>Réglages</a>
       </nav>
 
@@ -92,25 +95,29 @@
     </header>
 
     <main class="container">
-      {#if route.current.name === 'entities'}
-        <Entities />
-      {:else if route.current.name === 'planning'}
+      {#if route.current.name === 'planning'}
         <Planning />
+      {:else if route.current.name === 'entities'}
+        <Entities />
       {:else if route.current.name === 'settings'}
         <Settings />
+      {:else if route.current.name === 'profiles'}
+        <Profiles />
+      {:else if route.current.name === 'profile'}
+        <ProfileHistory id={route.current.id} />
       {:else if route.current.name === 'entity'}
         <EntityDetail id={route.current.id} />
       {/if}
     </main>
 
     <nav class="bottom-nav" aria-label="Navigation">
-      <a href="#/" class:active={route.current.name === 'entities'}>
-        <span aria-hidden="true">🗂️</span>
-        <span>Entités</span>
-      </a>
-      <a href="#/planning" class:active={route.current.name === 'planning'}>
+      <a href="#/" class:active={route.current.name === 'planning'}>
         <span aria-hidden="true">📅</span>
         <span>Planning</span>
+      </a>
+      <a href="#/entities" class:active={route.current.name === 'entities'}>
+        <span aria-hidden="true">🗂️</span>
+        <span>Entités</span>
       </a>
       <a href="#/settings" class:active={route.current.name === 'settings'}>
         <span aria-hidden="true">⚙️</span>

@@ -16,15 +16,17 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 ## Architecture
 
 - Svelte 5 avec runes (`$state`, `$derived`, `$effect`) ; l'état global est dans `src/lib/state.svelte.ts`.
-- Routage par hash maison dans `src/lib/router.svelte.ts`.
+- Routage par hash maison dans `src/lib/router.svelte.ts` : `#/` = planning (accueil), `#/entities`, `#/entity/<id>`, `#/profiles`, `#/profile/<id>`, `#/settings`.
 - Dexie est la source de vérité locale (`src/lib/db.ts`), Supabase est le backend.
 - `src/lib/sync.ts` pousse l'outbox puis tire les changements par curseur `updated_at`.
-- `src/sw.ts` gère le push et le silence par profil.
+- `src/sw.ts` gère le push et le silence par profil ; `src/lib/theme.ts` gère le thème par appareil.
 
 ## Règles à ne pas casser
 
 - Toute écriture synchronisée passe par `saveLocal` ou `saveMute`, jamais par un `put` Dexie direct : sinon la ligne n'est pas poussée.
 - Les suppressions sont logiques (`deleted_at`). Ne jamais supprimer une ligne en base.
+- L'archivage est distinct de la suppression : `archived` sur les entités et les actions. Le planning exclut les entités/actions archivées et les actions inactives. L'historique est conservé.
+- Le thème est un choix d'appareil stocké dans `localStorage` (`theme`), pas dans Dexie et pas synchronisé.
 - `updated_at` est posé par le trigger Postgres. La valeur envoyée par le client est écrasée.
 - `profile_mutes` a une clé composite `(profile_id, entity_id)` et pas d'`id` ; son `onConflict` est `profile_id,entity_id`.
 - L'ordre de push compte : profils → entités → actions → journaux → historique → silences.
@@ -38,6 +40,8 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 ## Ajouter une table synchronisée
 
 Mettre à jour, dans cet ordre : le type et l'interface dans `src/lib/types.ts`, le schéma Dexie, `dexieNames`, `CONFLICT_TARGET`, `TABLES`, la migration SQL avec RLS et trigger `updated_at`, et l'ordre de push si des clés étrangères l'exigent.
+
+Pour ajouter une colonne à une table existante, créer une nouvelle migration (`0003_...sql`) et l'ajouter aussi à `0001_init.sql` pour les installations neuves.
 
 ## Tests
 

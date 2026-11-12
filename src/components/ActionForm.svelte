@@ -63,6 +63,7 @@
           last_done: null,
           next_due: nextDue,
           active: true,
+          archived: false,
           notified_for: null,
           updated_at: now,
           deleted_at: null

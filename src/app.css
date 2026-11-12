@@ -21,8 +21,30 @@
   color-scheme: light;
 }
 
+:root[data-theme='dark'] {
+  --bg: #121714;
+  --surface: #1a211c;
+  --surface-2: #232d26;
+  --text: #e8eee9;
+  --muted: #9aaba0;
+  --line: #2c382f;
+  --accent: #6fbd8f;
+  --accent-soft: #22352a;
+  --accent-contrast: #102016;
+  --overdue: #ff9c93;
+  --overdue-bg: #3a1f1d;
+  --today: #ffc27a;
+  --today-bg: #3a2a18;
+  --soon: #e6d779;
+  --soon-bg: #33301a;
+  --later: #9fc8dd;
+  --later-bg: #1d2c34;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #121714;
     --surface: #1a211c;
     --surface-2: #232d26;
@@ -408,6 +430,51 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.thumb-button {
+  padding: 0;
+  border: 0;
+  background: var(--surface-2);
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.84);
+}
+
+.lightbox img {
+  max-width: 100%;
+  max-height: 90dvh;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+}
+
+.entity-row.archived {
+  opacity: 0.62;
 }
 
 .entity-main {

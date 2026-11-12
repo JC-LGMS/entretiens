@@ -33,6 +33,7 @@
     mute: null
   })
   let showEntityForm = $state(false)
+  let showArchivedActions = $state(false)
   let actionForm = $state<{ open: boolean; action?: ActionRow }>({ open: false })
   let doneAction = $state<ActionRow | null>(null)
 
@@ -66,6 +67,9 @@
   })
 
   const muted = $derived(Boolean(data.mute?.muted))
+  const archived = $derived(Boolean(data.entity?.archived))
+  const visibleActions = $derived(data.actions.filter((action) => !action.archived))
+  const archivedActions = $derived(data.actions.filter((action) => action.archived))
 
   const timeline = $derived.by(() => {
     const labels = new Map(data.allActions.map((a) => [a.id, a.label]))
@@ -146,9 +150,44 @@
       `Échéance reportée au ${formatShort(next)} (+${days} j)`
     )
   }
+
+  async function toggleEntityArchive() {
+    if (!data.entity) return
+    const next = !archived
+    await saveLocal('entities', {
+      ...data.entity,
+      archived: next,
+      updated_at: new Date().toISOString()
+    })
+    await recordHistory(
+      data.entity.id,
+      null,
+      app.profileId,
+      next ? 'entity_archived' : 'entity_restored',
+      next ? 'Entité archivée' : 'Entité désarchivée'
+    )
+  }
+
+  async function toggleActionArchive(action: ActionRow) {
+    if (!data.entity) return
+    const next = !action.archived
+    await saveLocal('actions', {
+      ...action,
+      archived: next,
+      active: next ? false : true,
+      updated_at: new Date().toISOString()
+    })
+    await recordHistory(
+      data.entity.id,
+      action.id,
+      app.profileId,
+      next ? 'action_archived' : 'action_restored',
+      next ? `Action « ${action.label} » archivée` : `Action « ${action.label} » désarchivée`
+    )
+  }
 </script>
 
-<a href="#/" class="btn btn-ghost btn-sm" style="margin-bottom:10px">← Entités</a>
+<a href="#/entities" class="btn btn-ghost btn-sm" style="margin-bottom:10px">← Entités</a>
 
 {#if !data.entity || data.entity.deleted_at}
   <div class="card empty">
@@ -163,13 +202,22 @@
         photoPath={data.entity.photo_path}
         kind={data.entity.kind}
         alt={data.entity.name}
+        zoomable
       />
       <div style="min-width:0">
-        <div class="row between">
+        <div class="row between wrap">
           <h1>{data.entity.name}</h1>
-          <button class="btn btn-sm" onclick={() => (showEntityForm = true)}>Modifier</button>
+          <div class="row wrap">
+            <button class="btn btn-sm" onclick={() => (showEntityForm = true)}>Modifier</button>
+            <button class="btn btn-sm" onclick={toggleEntityArchive}>
+              {archived ? 'Désarchiver' : 'Archiver'}
+            </button>
+          </div>
         </div>
-        <p class="muted">{kindLabel(data.entity.kind)}</p>
+        <p class="muted">
+          {kindLabel(data.entity.kind)}
+          {#if archived}<span class="badge neutral" style="margin-left:6px">Archivée</span>{/if}
+        </p>
         {#if data.entity.notes}<p style="margin-top:6px">{data.entity.notes}</p>{/if}
       </div>
     </div>
@@ -190,14 +238,14 @@
     <button class="btn btn-sm btn-soft" onclick={() => (actionForm = { open: true })}>+ Ajouter</button>
   </div>
 
-  {#if data.actions.length === 0}
+  {#if visibleActions.length === 0}
     <div class="card empty">
       <p>Aucune action pour cette entité.</p>
       <p class="tiny">Ajoutez par exemple « Entretien tous les 6 mois ».</p>
     </div>
   {:else}
     <div class="stack">
-      {#each data.actions as action (action.id)}
+      {#each visibleActions as action (action.id)}
         <div class="card action-card">
           <div class="action-head">
             <strong>{action.label}</strong>
@@ -221,10 +269,42 @@
               <button class="btn btn-sm" onclick={() => snooze(action, 7)}>+7 j</button>
             {/if}
             <button class="btn btn-sm" onclick={() => (actionForm = { open: true, action })}>Modifier</button>
+            <button class="btn btn-sm btn-ghost" onclick={() => toggleActionArchive(action)}>Archiver</button>
           </div>
         </div>
       {/each}
     </div>
+  {/if}
+
+  {#if archivedActions.length > 0}
+    <div class="section-title">
+      <h2>Actions archivées</h2>
+      <button class="btn btn-sm btn-ghost" onclick={() => (showArchivedActions = !showArchivedActions)}>
+        {showArchivedActions ? 'Masquer' : `${archivedActions.length} archivée${archivedActions.length > 1 ? 's' : ''}`}
+      </button>
+    </div>
+
+    {#if showArchivedActions}
+      <div class="stack">
+        {#each archivedActions as action (action.id)}
+          <div class="card action-card" style="opacity:0.72">
+            <div class="action-head">
+              <strong>{action.label}</strong>
+              <span class="badge neutral">Archivée</span>
+            </div>
+            <div class="action-meta">
+              <span>{intervalLabel(action.interval_value, action.interval_unit)}</span>
+              {#if action.last_done}<span>Dernière fois : {formatShort(action.last_done)}</span>{/if}
+              <span>Prochaine : {formatShort(action.next_due)}</span>
+            </div>
+            <div class="action-buttons">
+              <button class="btn btn-sm" onclick={() => (actionForm = { open: true, action })}>Modifier</button>
+              <button class="btn btn-sm btn-soft" onclick={() => toggleActionArchive(action)}>Désarchiver</button>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
   {/if}
 
   <div class="section-title">

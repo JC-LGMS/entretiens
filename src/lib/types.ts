@@ -27,6 +27,7 @@ export interface EntityRow {
   name: string
   notes: string
   photo_path: string | null
+  archived: boolean
   updated_at: string
   deleted_at: string | null
 }
@@ -40,6 +41,7 @@ export interface ActionRow {
   last_done: string | null
   next_due: string
   active: boolean
+  archived: boolean
   notified_for: string | null
   updated_at: string
   deleted_at: string | null
@@ -59,9 +61,13 @@ export type HistoryKind =
   | 'entity_created'
   | 'entity_updated'
   | 'entity_deleted'
+  | 'entity_archived'
+  | 'entity_restored'
   | 'action_created'
   | 'action_updated'
   | 'action_deleted'
+  | 'action_archived'
+  | 'action_restored'
   | 'photo_updated'
   | 'due_changed'
   | 'notify_toggled'

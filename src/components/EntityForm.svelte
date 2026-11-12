@@ -49,6 +49,7 @@
           name: name.trim(),
           notes: notes.trim(),
           photo_path: null,
+          archived: false,
           updated_at: now,
           deleted_at: null
         }

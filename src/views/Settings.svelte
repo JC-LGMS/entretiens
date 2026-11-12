@@ -3,13 +3,16 @@
   import { signOut } from '../lib/auth'
   import { disablePush, enablePush, getPushStatus, isStandalone, pushSupported, type PushStatus } from '../lib/push'
   import { setCurrentProfile } from '../lib/profiles'
+  import { navigate } from '../lib/router.svelte'
   import { app } from '../lib/state.svelte'
   import { syncNow } from '../lib/sync'
+  import { getTheme, setTheme, type Theme } from '../lib/theme'
 
   let push = $state<PushStatus | 'loading'>('loading')
   let pushBusy = $state(false)
   let pushError = $state('')
   let syncBusy = $state(false)
+  let theme = $state<Theme>(getTheme())
 
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
 
@@ -44,6 +47,11 @@
     syncBusy = true
     await syncNow()
     syncBusy = false
+  }
+
+  function chooseTheme(next: Theme) {
+    theme = next
+    setTheme(next)
   }
 
   function syncLabel(): string {
@@ -87,6 +95,23 @@
     </div>
     <button class="btn btn-sm" onclick={() => setCurrentProfile(null)}>Changer</button>
   </div>
+  <div class="settings-row" style="margin-top:10px">
+    <div class="grow">
+      <strong>Comptes et historiques</strong>
+      <p class="muted tiny">Voir l'activité de chaque profil.</p>
+    </div>
+    <button class="btn btn-sm" onclick={() => navigate('/profiles')}>Ouvrir</button>
+  </div>
+</div>
+
+<div class="section-title"><h2>Apparence</h2></div>
+<div class="card card-pad">
+  <div class="chips">
+    <button class="chip" class:active={theme === 'system'} onclick={() => chooseTheme('system')}>Système</button>
+    <button class="chip" class:active={theme === 'light'} onclick={() => chooseTheme('light')}>Clair</button>
+    <button class="chip" class:active={theme === 'dark'} onclick={() => chooseTheme('dark')}>Sombre</button>
+  </div>
+  <p class="muted tiny" style="margin-top:8px">Choix enregistré sur cet appareil.</p>
 </div>
 
 <div class="section-title"><h2>Notifications</h2></div>

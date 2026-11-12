@@ -7,6 +7,14 @@
     <meta name="description" content="Suivi et rappel des entretiens, tailles, plantations et documents." />
     <link rel="icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <script>
+      try {
+        const theme = localStorage.getItem('theme')
+        if (theme === 'light' || theme === 'dark') {
+          document.documentElement.dataset.theme = theme
+        }
+      } catch {}
+    </script>
     <title>Entretiens</title>
   </head>
   <body>

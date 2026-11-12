@@ -11,6 +11,7 @@
   let actions = $state<ActionRow[]>([])
   let query = $state('')
   let filter = $state<'all' | Kind>('all')
+  let showArchived = $state(false)
   let showForm = $state(false)
 
   $effect(() => {
@@ -32,6 +33,7 @@
     }
     const needle = query.trim().toLowerCase()
     return entities
+      .filter((entity) => showArchived || !entity.archived)
       .filter((entity) => filter === 'all' || entity.kind === filter)
       .filter(
         (entity) =>
@@ -41,6 +43,9 @@
       )
       .map((entity) => ({ entity, next: next.get(entity.id) ?? null }))
       .sort((a, b) => {
+        if (Boolean(a.entity.archived) !== Boolean(b.entity.archived)) {
+          return a.entity.archived ? 1 : -1
+        }
         if (a.next && b.next) return a.next.next_due.localeCompare(b.next.next_due)
         if (a.next) return -1
         if (b.next) return 1
@@ -67,12 +72,20 @@
       {kind.emoji} {kind.label}
     </button>
   {/each}
+  <button
+    class="chip"
+    class:active={showArchived}
+    aria-pressed={showArchived}
+    onclick={() => (showArchived = !showArchived)}
+  >
+    🗄️ Archivés
+  </button>
 </div>
 
 {#if rows.length === 0}
   <div class="card empty" style="margin-top:12px">
     <span class="big" aria-hidden="true">🌱</span>
-    <p>{query || filter !== 'all' ? 'Aucun résultat.' : 'Aucune entité pour le moment.'}</p>
+    <p>{query || filter !== 'all' || showArchived ? 'Aucun résultat.' : 'Aucune entité pour le moment.'}</p>
     {#if !query && filter === 'all'}
       <p class="tiny">Ajoutez un équipement, une plante ou une démarche administrative.</p>
     {/if}
@@ -80,7 +93,7 @@
 {:else}
   <div class="card" style="margin-top:12px">
     {#each rows as row (row.entity.id)}
-      <a class="entity-row" href={`#/entity/${row.entity.id}`}>
+      <a class="entity-row" class:archived={row.entity.archived} href={`#/entity/${row.entity.id}`}>
         <EntityPhoto
           entityId={row.entity.id}
           photoPath={row.entity.photo_path}
@@ -90,7 +103,9 @@
         <div class="entity-main">
           <strong>{row.entity.name}</strong>
           <small>
-            {kindLabel(row.entity.kind)}{row.entity.notes ? ` · ${row.entity.notes}` : ''}
+            {kindLabel(row.entity.kind)}{row.entity.archived ? ' · archivé' : ''}{row.entity.notes
+              ? ` · ${row.entity.notes}`
+              : ''}
           </small>
         </div>
         {#if row.next}

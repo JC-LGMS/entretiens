@@ -1,15 +1,20 @@
 export type Route =
-  | { name: 'entities' }
   | { name: 'planning' }
+  | { name: 'entities' }
   | { name: 'settings' }
   | { name: 'entity'; id: string }
+  | { name: 'profiles' }
+  | { name: 'profile'; id: string }
 
 function parse(): Route {
   const hash = location.hash.replace(/^#\/?/, '')
+  if (hash === '') return { name: 'planning' }
   if (hash.startsWith('entity/')) return { name: 'entity', id: hash.slice('entity/'.length) }
-  if (hash === 'planning') return { name: 'planning' }
+  if (hash.startsWith('profile/')) return { name: 'profile', id: hash.slice('profile/'.length) }
+  if (hash === 'profiles') return { name: 'profiles' }
+  if (hash === 'entities') return { name: 'entities' }
   if (hash === 'settings') return { name: 'settings' }
-  return { name: 'entities' }
+  return { name: 'planning' }
 }
 
 export const route = $state({ current: parse() })
