@@ -4,7 +4,7 @@ const pkgPath = 'package.json'
 const changelogPath = 'src/lib/changelog.json'
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
 const [major, minor] = String(pkg.version).split('.').map(Number)
-const version = minor >= 9 ? `${major + 1}.0.0` : `${major}.${minor + 1}.0`
+const version = `0.${major === 0 ? minor + 1 : 1}.0`
 const date = new Date().toISOString().slice(0, 10)
 const message = process.argv.slice(2).join(' ') || "Mise à jour de l'application"
 

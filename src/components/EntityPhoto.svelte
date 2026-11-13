@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { getPhotoBlob } from '../lib/photos'
   import { KINDS, type Kind } from '../lib/types'
 
@@ -13,7 +14,19 @@
 
   let url = $state<string | null>(null)
   let zoom = $state(false)
+  let pushed = false
   const emoji = $derived(KINDS.find((k) => k.value === kind)?.emoji ?? '📦')
+
+  onMount(() => {
+    const onPopState = () => {
+      if (zoom) {
+        zoom = false
+        pushed = false
+      }
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  })
 
   $effect(() => {
     const id = entityId
@@ -36,11 +49,19 @@
   })
 
   function open() {
-    if (url) zoom = true
+    if (!url || zoom) return
+    zoom = true
+    history.pushState({ lightbox: true }, '', location.href)
+    pushed = true
   }
 
   function close() {
+    if (!zoom) return
     zoom = false
+    if (pushed) {
+      pushed = false
+      history.back()
+    }
   }
 
   function onkeydown(event: KeyboardEvent) {

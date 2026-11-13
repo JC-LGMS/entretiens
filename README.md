@@ -153,15 +153,18 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 - La modale d'action indique l'entité concernée et propose une description.
 - Clic sur la photo d'une entité : elle s'affiche en grand.
 - « C'est fait » : le journal et l'historique se mettent à jour, sans erreur IndexedDB.
-- Le planning affiche la photo de l'entité, un liseré de couleur d'urgence, la recherche d'actions, et la date + le nombre de jours à droite.
+- Le planning affiche la photo de l'entité, un liseré complet rouge ou jaune selon l'urgence, la recherche d'actions, et la date + le nombre de jours à droite.
+- La date du jour et le nombre d'actions sont à droite du titre Planning.
 - Un clic sur une action ouvre la fiche de l'entité, met l'action en avant et recentre la vue ; le retour pointe vers Planning.
 - Une action peut être récurrente par intervalle (unité par défaut : an) ou par dates fixes (deux dates préremplies).
 - Archiver une action ou une entité : disparition du planning, historique conservé, restauration possible.
 - Le bouton de silence masque le rappel pour le profil courant.
 - Réglages > Comptes et historiques : activité de chaque profil, suppression des profils sans activité.
-- Fiche entité : réalisations et modifications séparées ; le titre Modifications est cliquable.
+- Fiche entité : réalisations et modifications séparées ; le titre Modifications est cliquable ; date et titre des réalisations sur la même ligne, commentaires mis en évidence.
+- Sur mobile, le retour ferme l'image agrandie sans quitter l'entité.
+- Le nom du profil n'apparaît plus sous « Entretiens ».
 - Thème clair/sombre via l'icône de l'en-tête, conservé sur l'appareil, y compris sur mobile.
-- Réglages > Version : changelog complet.
+- Réglages > Version : numéro au format 0.x et changelog complet.
 - Après un rechargement, les données sont toujours là.
 - En coupant le réseau, une création reste visible ; au retour du réseau, elle se synchronise.
 
@@ -217,7 +220,7 @@ npm run version:bump -- "description"  # incrémente la version de 0.1 et ajoute
 
 ## Version et changelog
 
-La version affichée dans Réglages vient de `package.json`. `npm run version:bump -- "description"` passe de 0.2 à 0.3 (ou 0.9 à 1.0) et ajoute une entrée dans `src/lib/changelog.json`.
+La version affichée dans Réglages vient de `package.json` et est raccourcie au format **0.x** (`0.4.0` → `0.4`). `npm run version:bump -- "description"` reste dans la série 0.x et ajoute une entrée dans `src/lib/changelog.json`.
 
 Un hook Git `pre-commit` est installé par `npm install` (script `prepare`). Il incrémente automatiquement la version quand un commit contient des changements dans `src/`, avec le message `Mise à jour de l'application` ou la valeur de `VERSION_MESSAGE`. Pour le désactiver, supprimer `.git/hooks/pre-commit`.
 
@@ -227,8 +230,8 @@ Un hook Git `pre-commit` est installé par `npm install` (script `prepare`). Il 
 - **Entités** : équipement, plante ou administratif, avec photo (compressée et stockée dans Supabase Storage). Une entité peut être archivée pour la retirer du planning sans perdre son historique.
 - **Actions** : libellé, description libre, récurrence par intervalle (jours/semaines/mois/années, unité par défaut : an) ou par dates fixes dans l'année (1er mars, 15 octobre…), prochaine échéance. Une action peut être archivée ou désactivée.
 - **Réalisation** : crée un journal, met à jour `last_done` et recalcule `next_due` (intervalle ou prochaine date fixe).
-- **Planning** : page d'accueil. Photo de l'entité, liseré de couleur selon l'urgence, recherche d'actions. En retard, aujourd'hui, ≤ 7 jours, plus tard. La date et le nombre de jours sont regroupés à droite. Un clic sur une action ouvre la fiche et met l'action en avant. Le silence par profil masque le rappel push mais laisse l'échéance visible.
-- **Historique** : les réalisations (« C'est fait ») sont séparées des modifications moins importantes ; le titre Modifications est cliquable. Réglages > Comptes et historiques permet de consulter l'activité de chaque profil et de supprimer un profil sans activité.
+- **Planning** : page d'accueil. Photo de l'entité, liseré complet rouge ou jaune selon l'urgence, recherche d'actions, date du jour et nombre d'actions à droite du titre. En retard, aujourd'hui, ≤ 7 jours, plus tard. La date et le nombre de jours sont regroupés à droite. Un clic sur une action ouvre la fiche et met l'action en avant. Le silence par profil masque le rappel push mais laisse l'échéance visible.
+- **Historique** : les réalisations (« C'est fait ») sont séparées des modifications moins importantes ; le titre Modifications est cliquable. Les réalisations affichent date et titre sur la même ligne, avec un commentaire mis en évidence.
 - **Photos** : un clic sur la photo d'une entité l'ouvre en grand ; les photos apparaissent dans le sélecteur d'action.
 - **Thème** : icône clair/sombre dans l'en-tête, ou Système/Clair/Sombre dans Réglages, enregistré par appareil. Le thème applique explicitement `data-theme` et `color-scheme` pour éviter les incohérences de barre d'état sur mobile.
 - **Version** : numéro affiché dans Réglages, changelog de toutes les versions au clic.

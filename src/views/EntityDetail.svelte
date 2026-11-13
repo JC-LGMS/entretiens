@@ -350,9 +350,11 @@
       <div class="timeline">
         {#each realisations as entry (entry.id)}
           <div class="timeline-item">
-            <div class="when">{when(entry.at)}{entry.who ? ` · ${entry.who}` : ''}</div>
-            <p>{entry.title}</p>
-            {#if entry.text}<p class="muted">{entry.text}</p>{/if}
+            <p class="realisation-line">
+              <span class="when">{when(entry.at)}{entry.who ? ` · ${entry.who}` : ''}</span>
+              <span>{entry.title}</span>
+            </p>
+            {#if entry.text}<p class="realisation-comment">{entry.text}</p>{/if}
           </div>
         {/each}
       </div>

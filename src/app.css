@@ -610,6 +610,22 @@ textarea {
   font-size: 0.76rem;
 }
 
+.realisation-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.realisation-comment {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
 .timeline-item p {
   margin-top: 2px;
 }
@@ -718,16 +734,32 @@ textarea {
   text-align: right;
 }
 
+.planning-head {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.planning-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
 .planning-row.overdue {
-  box-shadow: inset 4px 0 0 var(--overdue);
+  box-shadow: inset 0 0 0 2px var(--overdue);
+  border-radius: 10px;
+}
+
+.planning-row.soon {
+  box-shadow: inset 0 0 0 2px var(--soon);
+  border-radius: 10px;
 }
 
 .planning-row.today {
   box-shadow: inset 4px 0 0 var(--today);
-}
-
-.planning-row.soon {
-  box-shadow: inset 4px 0 0 var(--soon);
 }
 
 .planning-row.later {

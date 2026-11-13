@@ -108,13 +108,16 @@
   }
 </script>
 
-<div class="row between" style="margin-bottom:12px">
-  <div>
-    <h1>Planning</h1>
-    <p class="muted tiny">
-      {formatDate(todayISO())} · {filteredItems.length} action{filteredItems.length > 1 ? 's' : ''}
-      {overdueCount ? ` · ${overdueCount} en retard` : ''}
-    </p>
+<div class="row between planning-head" style="margin-bottom:12px">
+  <h1>Planning</h1>
+  <div class="planning-meta">
+    <span class="muted tiny">{formatDate(todayISO())}</span>
+    <span class="badge neutral">
+      {filteredItems.length} action{filteredItems.length > 1 ? 's' : ''}
+    </span>
+    {#if overdueCount}
+      <span class="badge overdue">{overdueCount} en retard</span>
+    {/if}
   </div>
   <button class="btn btn-sm btn-primary desktop-add" onclick={startAction}>＋ Action</button>
 </div>

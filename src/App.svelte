@@ -79,7 +79,6 @@
     <header class="topbar">
       <div class="brand">
         <strong>Entretiens</strong>
-        <small>{app.profile.name}</small>
       </div>
 
       <nav class="desktop-nav" aria-label="Navigation">
