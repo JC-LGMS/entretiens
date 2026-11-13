@@ -1,0 +1,84 @@
+name: Sauvegarde chiffrée
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      AGE_PUBLIC_KEY: ${{ vars.AGE_PUBLIC_KEY || secrets.AGE_PUBLIC_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Vérifier la configuration
+        run: |
+          : "${SUPABASE_PROJECT_REF:?SUPABASE_PROJECT_REF manquant}"
+          : "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN manquant}"
+          : "${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY manquant}"
+          : "${AGE_PUBLIC_KEY:?AGE_PUBLIC_KEY manquant}"
+
+      - name: Dump du schéma public
+        run: |
+          mkdir -p backup
+          supabase db dump --remote="$SUPABASE_PROJECT_REF" --schema=public --file=backup/public.sql --yes
+          test -s backup/public.sql
+
+      - name: Copie des photos
+        run: |
+          SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co" \
+          PHOTOS_DEST=backup/photos \
+          node scripts/backup-photos.mjs
+
+      - name: Archive et chiffrement
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y age
+          DATE=$(date -u +%F)
+          ARCHIVE="entretiens-backup-${DATE}.tar.gz"
+          tar -czf "$ARCHIVE" backup
+          age -r "$AGE_PUBLIC_KEY" -o "${ARCHIVE}.age" "$ARCHIVE"
+          sha256sum "${ARCHIVE}.age" > checksums.txt
+          rm -f "$ARCHIVE"
+          rm -rf backup
+          {
+            echo "### Sauvegarde ${DATE}"
+            echo ""
+            echo "- Fichier : \`${ARCHIVE}.age\`"
+            echo "- Taille : $(du -h "${ARCHIVE}.age" | cut -f1)"
+            echo "- Empreinte : \`$(cut -d' ' -f1 checksums.txt)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: entretiens-backup-${{ github.run_id }}
+          path: |
+            entretiens-backup-*.tar.gz.age
+            checksums.txt
+          retention-days: 180
+          if-no-files-found: error

@@ -26,6 +26,7 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - Les actions ont deux modes : intervalle (`interval_value` / `interval_unit`) ou dates fixes annuelles (`annual_dates`, tableau de `MM-DD`). `next_due` reste la source de vérité pour le planning et le cron.
 - `saveLocal` / `saveMute` passent les lignes par `toPlain` (clone JSON) avant Dexie : les proxys réactifs de Svelte ne sont pas clonables par IndexedDB.
 - `EntityPhoto` pousse un état d'historique à l'ouverture d'une image : le bouton retour ferme la visionneuse avant de quitter l'entité.
+- Sauvegarde : `.github/workflows/backup.yml` (hebdomadaire), `scripts/backup-photos.mjs`, procédure `docs/backup-restore.md`. Secrets GitHub : `SUPABASE_ACCESS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, variable `SUPABASE_PROJECT_REF`, variable `AGE_PUBLIC_KEY`.
 
 ## Règles à ne pas casser
 
@@ -35,7 +36,8 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - Le thème est un choix d'appareil stocké dans `localStorage` (`theme`), pas dans Dexie et pas synchronisé.
 - Pour une action à dates fixes, `annual_dates` contient des `MM-DD` triés et `next_due` est recalculé par `nextAnnualDue` ; ne pas stocker l'année dans les dates.
 - Toute écriture Dexie passe par `saveLocal` / `saveMute` qui clonent la ligne en JSON ; ne jamais faire un `put` direct avec un objet réactif.
-- Toute modification fonctionnelle de `src/` doit passer par `npm run version:bump -- "..."` (ou le hook Git) pour garder `package.json` et `changelog.json` alignés. Le script reste dans la série 0.x ; l'affichage retire le patch (`.0`).
+- Ne jamais committer un dump, une photo de sauvegarde ou la clé privée `age`. La clé `service_role` utilisée par le script photos est un secret GitHub, jamais dans le dépôt.
+- Toute modification fonctionnelle de `src/` doit passer par `npm run version:bump -- "..."` (ou le hook Git) pour garder `package.json`, `package-lock.json` et `changelog.json` alignés. Le script reste dans la série 0.x ; l'affichage retire le patch (`.0`).
 - `updated_at` est posé par le trigger Postgres. La valeur envoyée par le client est écrasée.
 - `profile_mutes` a une clé composite `(profile_id, entity_id)` et pas d'`id` ; son `onConflict` est `profile_id,entity_id`.
 - L'ordre de push compte : profils → entités → actions → journaux → historique → silences.

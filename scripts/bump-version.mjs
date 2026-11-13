@@ -11,6 +11,16 @@ const message = process.argv.slice(2).join(' ') || "Mise à jour de l'applicatio
 pkg.version = version
 writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
 
+const lockPath = 'package-lock.json'
+try {
+  const lock = JSON.parse(readFileSync(lockPath, 'utf8'))
+  lock.version = version
+  if (lock.packages?.['']) lock.packages[''].version = version
+  writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`)
+} catch {
+  // Le lockfile n'existe pas encore.
+}
+
 const changelog = JSON.parse(readFileSync(changelogPath, 'utf8'))
 if (changelog[0]?.version === version) {
   changelog[0].changes.push(message)

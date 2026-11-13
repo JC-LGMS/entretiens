@@ -220,7 +220,7 @@ npm run version:bump -- "description"  # incrémente la version de 0.1 et ajoute
 
 ## Version et changelog
 
-La version affichée dans Réglages vient de `package.json` et est raccourcie au format **0.x** (`0.4.0` → `0.4`). `npm run version:bump -- "description"` reste dans la série 0.x et ajoute une entrée dans `src/lib/changelog.json`.
+La version affichée dans Réglages vient de `package.json` et est raccourcie au format **0.x** (`0.5.0` → `0.5`). `npm run version:bump -- "description"` reste dans la série 0.x, met à jour `package.json`, `package-lock.json` et ajoute une entrée dans `src/lib/changelog.json`.
 
 Un hook Git `pre-commit` est installé par `npm install` (script `prepare`). Il incrémente automatiquement la version quand un commit contient des changements dans `src/`, avec le message `Mise à jour de l'application` ou la valeur de `VERSION_MESSAGE`. Pour le désactiver, supprimer `.git/hooks/pre-commit`.
 
@@ -255,6 +255,18 @@ Fichiers clés : `src/lib/db.ts`, `src/lib/sync.ts`, `src/lib/photos.ts`.
 - `supabase/functions/send-reminders/index.ts` sélectionne les actions dont `next_due = aujourd'hui`, envoie à tous les abonnements, puis marque `notified_for`.
 - Le service worker (`src/sw.ts`) lit le profil courant et `profile_mutes` dans IndexedDB ; si l'entité est coupée pour ce profil, il n'affiche rien.
 - Un échec du cron un jour donné ne rattrape pas le rappel manqué ; l'échéance reste visible dans le planning.
+
+## Sauvegarde
+
+Une sauvegarde logique hebdomadaire est produite par GitHub Actions (`.github/workflows/backup.yml`), le dimanche à 03:00 UTC, avec lancement manuel possible.
+
+- Dump du schéma `public` (tables, données, RLS, triggers).
+- Copie du bucket `photos` via `scripts/backup-photos.mjs`.
+- Archive chiffrée avec `age`, publiée en artefact GitHub pendant **180 jours**.
+
+Secrets/variables à configurer : `SUPABASE_ACCESS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `AGE_PUBLIC_KEY`. La clé privée `age` doit être conservée dans le gestionnaire de mots de passe ; sans elle, les archives sont illisibles.
+
+La procédure de restauration complète est dans [`docs/backup-restore.md`](docs/backup-restore.md).
 
 ## 14. Limites connues
 

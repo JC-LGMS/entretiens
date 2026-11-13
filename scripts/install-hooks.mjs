@@ -12,12 +12,12 @@ if (existsSync(oldHook) && readFileSync(oldHook, 'utf8').includes('bump-version.
 
 const hook = `#!/bin/sh
 # entretiens version hook
-if git diff --cached --name-only | grep -qE '^(package.json|src/lib/changelog.json)$'; then
+if git diff --cached --name-only | grep -qE '^(package.json|package-lock.json|src/lib/changelog.json)$'; then
   exit 0
 fi
 if git diff --cached --name-only | grep -qE '^src/'; then
   node scripts/bump-version.mjs "\${VERSION_MESSAGE:-Mise à jour de l'application}" >/dev/null 2>&1 || exit 0
-  git add package.json src/lib/changelog.json
+  git add package.json package-lock.json src/lib/changelog.json
 fi
 `
 
