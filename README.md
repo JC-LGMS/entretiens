@@ -153,13 +153,14 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 - La modale d'action indique l'entité concernée et propose une description.
 - Clic sur la photo d'une entité : elle s'affiche en grand.
 - « C'est fait » : le journal et l'historique se mettent à jour, sans erreur IndexedDB.
-- Le planning affiche la date et le nombre de jours ensemble, à droite.
+- Le planning affiche la photo de l'entité, un liseré de couleur d'urgence, la recherche d'actions, et la date + le nombre de jours à droite.
+- Un clic sur une action ouvre la fiche de l'entité, met l'action en avant et recentre la vue ; le retour pointe vers Planning.
 - Une action peut être récurrente par intervalle (unité par défaut : an) ou par dates fixes (deux dates préremplies).
 - Archiver une action ou une entité : disparition du planning, historique conservé, restauration possible.
 - Le bouton de silence masque le rappel pour le profil courant.
 - Réglages > Comptes et historiques : activité de chaque profil, suppression des profils sans activité.
-- Fiche entité : réalisations et modifications séparées.
-- Thème clair/sombre via l'icône de l'en-tête, conservé sur l'appareil.
+- Fiche entité : réalisations et modifications séparées ; le titre Modifications est cliquable.
+- Thème clair/sombre via l'icône de l'en-tête, conservé sur l'appareil, y compris sur mobile.
 - Réglages > Version : changelog complet.
 - Après un rechargement, les données sont toujours là.
 - En coupant le réseau, une création reste visible ; au retour du réseau, elle se synchronise.
@@ -226,10 +227,10 @@ Un hook Git `pre-commit` est installé par `npm install` (script `prepare`). Il 
 - **Entités** : équipement, plante ou administratif, avec photo (compressée et stockée dans Supabase Storage). Une entité peut être archivée pour la retirer du planning sans perdre son historique.
 - **Actions** : libellé, description libre, récurrence par intervalle (jours/semaines/mois/années, unité par défaut : an) ou par dates fixes dans l'année (1er mars, 15 octobre…), prochaine échéance. Une action peut être archivée ou désactivée.
 - **Réalisation** : crée un journal, met à jour `last_done` et recalcule `next_due` (intervalle ou prochaine date fixe).
-- **Planning** : page d'accueil. En retard, aujourd'hui, ≤ 7 jours, plus tard. La date et le nombre de jours sont regroupés à droite. Le silence par profil masque le rappel push mais laisse l'échéance visible.
-- **Historique** : les réalisations (« C'est fait ») sont séparées des modifications moins importantes. Réglages > Comptes et historiques permet de consulter l'activité de chaque profil et de supprimer un profil sans activité.
+- **Planning** : page d'accueil. Photo de l'entité, liseré de couleur selon l'urgence, recherche d'actions. En retard, aujourd'hui, ≤ 7 jours, plus tard. La date et le nombre de jours sont regroupés à droite. Un clic sur une action ouvre la fiche et met l'action en avant. Le silence par profil masque le rappel push mais laisse l'échéance visible.
+- **Historique** : les réalisations (« C'est fait ») sont séparées des modifications moins importantes ; le titre Modifications est cliquable. Réglages > Comptes et historiques permet de consulter l'activité de chaque profil et de supprimer un profil sans activité.
 - **Photos** : un clic sur la photo d'une entité l'ouvre en grand ; les photos apparaissent dans le sélecteur d'action.
-- **Thème** : icône clair/sombre dans l'en-tête, ou Système/Clair/Sombre dans Réglages, enregistré par appareil.
+- **Thème** : icône clair/sombre dans l'en-tête, ou Système/Clair/Sombre dans Réglages, enregistré par appareil. Le thème applique explicitement `data-theme` et `color-scheme` pour éviter les incohérences de barre d'état sur mobile.
 - **Version** : numéro affiché dans Réglages, changelog de toutes les versions au clic.
 - **Hors ligne** : toutes les écritures vont dans IndexedDB puis dans une file `outbox`.
 

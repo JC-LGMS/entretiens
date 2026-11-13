@@ -17,10 +17,11 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 ## Architecture
 
 - Svelte 5 avec runes (`$state`, `$derived`, `$effect`) ; l'état global est dans `src/lib/state.svelte.ts`.
-- Routage par hash maison dans `src/lib/router.svelte.ts` : `#/` = planning (accueil), `#/entities`, `#/entity/<id>`, `#/profiles`, `#/profile/<id>`, `#/settings`.
+- Routage par hash maison dans `src/lib/router.svelte.ts` : `#/` = planning (accueil), `#/entities`, `#/entity/<id>?action=<id>`, `#/profiles`, `#/profile/<id>`, `#/settings`.
 - Dexie est la source de vérité locale (`src/lib/db.ts`), Supabase est le backend.
 - `src/lib/sync.ts` pousse l'outbox puis tire les changements par curseur `updated_at`.
 - `src/sw.ts` gère le push et le silence par profil ; `src/lib/theme.ts` gère le thème par appareil.
+- Le thème est toujours appliqué explicitement (`data-theme` = `light` ou `dark`, `color-scheme: only light|dark`) ; le mode « système » résout la préférence et écoute les changements.
 - `src/lib/version.ts` expose la version et le changelog ; `src/components/Icon.svelte` contient les icônes SVG de navigation.
 - Les actions ont deux modes : intervalle (`interval_value` / `interval_unit`) ou dates fixes annuelles (`annual_dates`, tableau de `MM-DD`). `next_due` reste la source de vérité pour le planning et le cron.
 - `saveLocal` / `saveMute` passent les lignes par `toPlain` (clone JSON) avant Dexie : les proxys réactifs de Svelte ne sont pas clonables par IndexedDB.

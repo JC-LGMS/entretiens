@@ -123,7 +123,7 @@
       {:else if route.current.name === 'profile'}
         <ProfileHistory id={route.current.id} />
       {:else if route.current.name === 'entity'}
-        <EntityDetail id={route.current.id} />
+        <EntityDetail id={route.current.id} focusActionId={route.current.actionId} />
       {/if}
     </main>
 

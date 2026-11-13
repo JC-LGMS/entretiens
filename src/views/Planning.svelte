@@ -5,7 +5,7 @@
   import { navigate } from '../lib/router.svelte'
   import { app } from '../lib/state.svelte'
   import { urgencyOf, URGENCY_LABEL, type Urgency } from '../lib/urgency'
-  import { KINDS, type ActionRow, type EntityRow, type Kind } from '../lib/types'
+  import type { ActionRow, EntityRow } from '../lib/types'
   import ActionForm from '../components/ActionForm.svelte'
   import EntityForm from '../components/EntityForm.svelte'
   import EntityPhoto from '../components/EntityPhoto.svelte'
@@ -20,6 +20,7 @@
 
   let items = $state<Item[]>([])
   let entities = $state<EntityRow[]>([])
+  let query = $state('')
   let showEntityForm = $state(false)
   let showEntityPicker = $state(false)
   let actionEntityId = $state<string | null>(null)
@@ -62,9 +63,22 @@
     return () => sub.unsubscribe()
   })
 
+  const filteredItems = $derived.by(() => {
+    const needle = query.trim().toLowerCase()
+    if (!needle) return items
+    return items.filter(
+      (item) =>
+        item.action.label.toLowerCase().includes(needle) ||
+        item.entity.name.toLowerCase().includes(needle) ||
+        (item.action.description ?? '').toLowerCase().includes(needle)
+    )
+  })
+
   const groups = $derived.by(() => {
     const order: Urgency[] = ['overdue', 'today', 'soon', 'later']
-    const sorted = [...items].sort((a, b) => a.action.next_due.localeCompare(b.action.next_due))
+    const sorted = [...filteredItems].sort((a, b) =>
+      a.action.next_due.localeCompare(b.action.next_due)
+    )
     return order
       .map((urgency) => ({
         urgency,
@@ -75,12 +89,8 @@
   })
 
   const overdueCount = $derived(
-    items.filter((item) => urgencyOf(item.action.next_due) === 'overdue').length
+    filteredItems.filter((item) => urgencyOf(item.action.next_due) === 'overdue').length
   )
-
-  function emojiFor(kind: Kind): string {
-    return KINDS.find((k) => k.value === kind)?.emoji ?? '📦'
-  }
 
   function startAction() {
     if (entities.length === 0) {
@@ -102,11 +112,21 @@
   <div>
     <h1>Planning</h1>
     <p class="muted tiny">
-      {formatDate(todayISO())} · {items.length} action{items.length > 1 ? 's' : ''}
+      {formatDate(todayISO())} · {filteredItems.length} action{filteredItems.length > 1 ? 's' : ''}
       {overdueCount ? ` · ${overdueCount} en retard` : ''}
     </p>
   </div>
   <button class="btn btn-sm btn-primary desktop-add" onclick={startAction}>＋ Action</button>
+</div>
+
+<div class="search" style="margin-bottom:12px">
+  <span aria-hidden="true">🔎</span>
+  <input
+    type="text"
+    bind:value={query}
+    placeholder="Rechercher une action…"
+    aria-label="Rechercher une action"
+  />
 </div>
 
 <button class="fab mobile-only" aria-label="Ajouter une action" onclick={startAction}>＋</button>
@@ -114,8 +134,10 @@
 {#if groups.length === 0}
   <div class="card empty">
     <span class="big" aria-hidden="true">📅</span>
-    <p>Aucune action planifiée.</p>
-    <p class="tiny">Ajoutez un équipement puis une action pour commencer.</p>
+    <p>{query ? 'Aucune action trouvée.' : 'Aucune action planifiée.'}</p>
+    {#if !query}
+      <p class="tiny">Ajoutez un équipement puis une action pour commencer.</p>
+    {/if}
   </div>
 {:else}
   {#each groups as group (group.urgency)}
@@ -125,8 +147,16 @@
     </div>
     <div class="card">
       {#each group.items as item (item.action.id)}
-        <a class="entity-row" href={`#/entity/${item.entity.id}`}>
-          <div class="thumb" aria-hidden="true">{emojiFor(item.entity.kind)}</div>
+        <a
+          class={`entity-row planning-row ${urgencyOf(item.action.next_due)}`}
+          href={`#/entity/${item.entity.id}?action=${item.action.id}`}
+        >
+          <EntityPhoto
+            entityId={item.entity.id}
+            photoPath={item.entity.photo_path}
+            kind={item.entity.kind}
+            alt={item.entity.name}
+          />
           <div class="entity-main">
             <strong>{item.action.label}</strong>
             <small>{item.entity.name}{item.muted ? ' · 🔕 notifications coupées' : ''}</small>

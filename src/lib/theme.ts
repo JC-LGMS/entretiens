@@ -27,11 +27,9 @@ export const themeState = writable<{ mode: Theme; resolved: ResolvedTheme }>({
 })
 
 export function applyTheme(theme: Theme): void {
-  const root = document.documentElement
-  if (theme === 'system') root.removeAttribute('data-theme')
-  else root.dataset.theme = theme
-
   const resolved = resolveTheme(theme)
+  document.documentElement.dataset.theme = resolved
+
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute('content', resolved === 'dark' ? '#121714' : '#f3f6f2')

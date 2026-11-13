@@ -47,7 +47,7 @@
   }
 </script>
 
-<a href="#/settings" class="btn btn-ghost btn-sm" style="margin-bottom:10px">← Réglages</a>
+<a href="#/settings" class="btn btn-ghost btn-sm mobile-only" style="margin-bottom:10px">← Réglages</a>
 
 <h1>Comptes</h1>
 <p class="muted tiny" style="margin-bottom:14px">

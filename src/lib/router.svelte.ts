@@ -2,14 +2,18 @@ export type Route =
   | { name: 'planning' }
   | { name: 'entities' }
   | { name: 'settings' }
-  | { name: 'entity'; id: string }
+  | { name: 'entity'; id: string; actionId?: string }
   | { name: 'profiles' }
   | { name: 'profile'; id: string }
 
 function parse(): Route {
   const hash = location.hash.replace(/^#\/?/, '')
   if (hash === '') return { name: 'planning' }
-  if (hash.startsWith('entity/')) return { name: 'entity', id: hash.slice('entity/'.length) }
+  if (hash.startsWith('entity/')) {
+    const [id, query] = hash.slice('entity/'.length).split('?')
+    const actionId = new URLSearchParams(query ?? '').get('action') ?? undefined
+    return { name: 'entity', id, actionId }
+  }
   if (hash.startsWith('profile/')) return { name: 'profile', id: hash.slice('profile/'.length) }
   if (hash === 'profiles') return { name: 'profiles' }
   if (hash === 'entities') return { name: 'entities' }

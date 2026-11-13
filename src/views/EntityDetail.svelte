@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte'
   import { liveQuery } from 'dexie'
   import { db, saveLocal, saveMute } from '../lib/db'
   import { addInterval, formatShort, intervalLabel, todayISO } from '../lib/dates'
@@ -11,7 +12,7 @@
   import EntityPhoto from '../components/EntityPhoto.svelte'
   import UrgencyBadge from '../components/UrgencyBadge.svelte'
 
-  let { id }: { id: string } = $props()
+  let { id, focusActionId }: { id: string; focusActionId?: string } = $props()
 
   interface DetailData {
     entity: EntityRow | null
@@ -37,6 +38,18 @@
   let showModifications = $state(false)
   let actionForm = $state<{ open: boolean; action?: ActionRow }>({ open: false })
   let doneAction = $state<ActionRow | null>(null)
+  let lastFocused = ''
+
+  $effect(() => {
+    const actionId = focusActionId
+    if (!actionId || !data.entity || lastFocused === actionId) return
+    lastFocused = actionId
+    void tick().then(() => {
+      document
+        .getElementById(`action-${actionId}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  })
 
   $effect(() => {
     const entityId = id
@@ -190,7 +203,13 @@
   }
 </script>
 
-<a href="#/entities" class="btn btn-ghost btn-sm" style="margin-bottom:10px">← Entités</a>
+<a
+  href={focusActionId ? '#/' : '#/entities'}
+  class="btn btn-ghost btn-sm"
+  style="margin-bottom:10px"
+>
+  ← {focusActionId ? 'Planning' : 'Entités'}
+</a>
 
 {#if !data.entity || data.entity.deleted_at}
   <div class="card empty">
@@ -249,7 +268,11 @@
   {:else}
     <div class="stack">
       {#each visibleActions as action (action.id)}
-        <div class="card action-card">
+        <div
+          class="card action-card"
+          class:highlighted={focusActionId === action.id}
+          id={`action-${action.id}`}
+        >
           <div class="action-head">
             <strong>{action.label}</strong>
             {#if action.active}
@@ -291,7 +314,12 @@
     {#if showArchivedActions}
       <div class="stack">
         {#each archivedActions as action (action.id)}
-          <div class="card action-card" style="opacity:0.72">
+          <div
+            class="card action-card"
+            class:highlighted={focusActionId === action.id}
+            id={`action-${action.id}`}
+            style="opacity:0.72"
+          >
             <div class="action-head">
               <strong>{action.label}</strong>
               <span class="badge neutral">Archivée</span>
@@ -332,12 +360,14 @@
   {/if}
 
   {#if modifications.length > 0}
-    <div class="section-title">
-      <h2>Modifications</h2>
-      <button class="btn btn-sm btn-ghost" onclick={() => (showModifications = !showModifications)}>
-        {showModifications ? 'Masquer' : `${modifications.length}`}
-      </button>
-    </div>
+    <button
+      class="section-title section-toggle"
+      aria-expanded={showModifications}
+      onclick={() => (showModifications = !showModifications)}
+    >
+      <span class="section-label">Modifications</span>
+      <span class="badge neutral">{modifications.length} {showModifications ? '▲' : '▼'}</span>
+    </button>
 
     {#if showModifications}
       <div class="card card-pad">
