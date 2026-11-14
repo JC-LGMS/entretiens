@@ -39,6 +39,28 @@ postgresql://postgres.<ref>:<mot-de-passe>@aws-0-<region>.pooler.supabase.com:54
 
 Le mot de passe de la base est un secret : ne pas le coller dans une conversation. Le token `SUPABASE_ACCESS_TOKEN` n’est plus nécessaire pour cette sauvegarde.
 
+### Encoder le mot de passe dans l’URL
+
+Si le mot de passe contient `%`, `@`, `:`, `/`, `#` ou `?`, il doit être encodé URL. Sinon `pg_dump` échoue avec :
+
+```text
+pg_dump: error: invalid percent-encoded token
+```
+
+Sous PowerShell, construis l’URL sans exposer le mot de passe dans l’historique :
+
+```powershell
+$password = Read-Host -AsSecureString "Mot de passe base"
+$plain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+  [Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+)
+$encoded = [uri]::EscapeDataString($plain)
+$url = "postgresql://postgres.wfugwlrbiojmubbaxlsy:$encoded@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
+$url | gh secret set SUPABASE_DB_URL
+```
+
+Adapte l’hôte si ton Session pooler n’est pas en `eu-west-1`.
+
 ### 3. Vérifier le workflow
 
 Le workflow se trouve dans `.github/workflows/backup.yml`. Il se lance :
@@ -128,6 +150,7 @@ Ne pas restaurer dans le projet de production existant : créer un projet neuf.
 
 - **Docker** : le dump utilise l’image `postgres:17` via Docker. Le runner GitHub fournit Docker ; en local, démarrer Docker Desktop.
 - **Connexion base refusée** : vérifier la chaîne Session pooler et le mot de passe dans `SUPABASE_DB_URL`.
+- **`invalid percent-encoded token`** : le mot de passe contient un caractère spécial non encodé. Utiliser `[uri]::EscapeDataString` comme ci-dessus.
 - **Dump sans données** : le workflow vérifie la présence de `COPY`/`INSERT` ; s’il échoue, vérifier que `pg_dump` s’est bien exécuté et que la base contient des lignes.
 - **Clé service_role régénérée** : mettre à jour `SUPABASE_SERVICE_ROLE_KEY` dans GitHub après toute rotation du JWT secret.
 - **Artefact absent** : vérifier que le workflow a bien exécuté l’étape d’upload et que `AGE_PUBLIC_KEY` est une clé publique `age1...` valide.

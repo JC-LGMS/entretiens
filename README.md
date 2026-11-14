@@ -266,6 +266,8 @@ Une sauvegarde logique hebdomadaire est produite par GitHub Actions (`.github/wo
 
 Secrets/variables à configurer : `SUPABASE_DB_URL` (Session pooler), `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `AGE_PUBLIC_KEY`. La clé privée `age` doit être conservée dans le gestionnaire de mots de passe ; sans elle, les archives sont illisibles.
 
+Le mot de passe contenu dans `SUPABASE_DB_URL` doit être **encodé URL** (`%` → `%25`, `@` → `%40`, etc.) ; sinon `pg_dump` échoue avec `invalid percent-encoded token`. La procédure PowerShell est dans [`docs/backup-restore.md`](docs/backup-restore.md).
+
 `SUPABASE_ACCESS_TOKEN` n’est plus utilisé par la sauvegarde : il peut être supprimé des secrets GitHub ou conservé pour d’autres usages CLI.
 
 La procédure de restauration complète est dans [`docs/backup-restore.md`](docs/backup-restore.md).
