@@ -80,5 +80,5 @@ jobs:
           path: |
             entretiens-backup-*.tar.gz.age
             checksums.txt
-          retention-days: 180
+          retention-days: 90
           if-no-files-found: error
