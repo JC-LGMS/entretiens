@@ -150,6 +150,7 @@ Ne pas restaurer dans le projet de production existant : créer un projet neuf.
 
 - **Docker** : le dump utilise l’image `postgres:17` via Docker. Le runner GitHub fournit Docker ; en local, démarrer Docker Desktop.
 - **Connexion base refusée** : vérifier la chaîne Session pooler et le mot de passe dans `SUPABASE_DB_URL`.
+- **`Network is unreachable` / hôte `db.<ref>.supabase.co`** : c’est la connexion directe, IPv6 uniquement, inaccessible depuis GitHub Actions. Utiliser l’hôte **Session pooler** (`aws-0-<region>.pooler.supabase.com`), pas la connexion directe.
 - **`invalid percent-encoded token`** : le mot de passe contient un caractère spécial non encodé. Utiliser `[uri]::EscapeDataString` comme ci-dessus.
 - **Dump sans données** : le workflow vérifie la présence de `COPY`/`INSERT` ; s’il échoue, vérifier que `pg_dump` s’est bien exécuté et que la base contient des lignes.
 - **Clé service_role régénérée** : mettre à jour `SUPABASE_SERVICE_ROLE_KEY` dans GitHub après toute rotation du JWT secret.
