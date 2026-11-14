@@ -26,12 +26,18 @@ Dans **Settings > Secrets and variables > Actions** :
 
 | Nom | Type | Valeur |
 |---|---|---|
-| `SUPABASE_ACCESS_TOKEN` | Secret | Token Supabase à portée limitée, avec `database_write` pour le dump |
-| `SUPABASE_SERVICE_ROLE_KEY` | Secret | Clé `service_role` du projet, utilisée pour lire le bucket privé |
+| `SUPABASE_DB_URL` | Secret | chaîne **Session pooler** du projet (avec le mot de passe de la base) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret | clé `service_role` du projet, utilisée pour lire le bucket privé |
 | `SUPABASE_PROJECT_REF` | Variable | `wfugwlrbiojmubbaxlsy` |
 | `AGE_PUBLIC_KEY` | Variable | clé publique `age1...` |
 
-Le token et la clé `service_role` sont sensibles : ne les colle pas dans une conversation ni dans le dépôt.
+La chaîne Session pooler se trouve dans **Connect** > **Session pooler** sur le tableau de bord Supabase. Elle ressemble à :
+
+```text
+postgresql://postgres.<ref>:<mot-de-passe>@aws-0-<region>.pooler.supabase.com:5432/postgres
+```
+
+Le mot de passe de la base est un secret : ne pas le coller dans une conversation. Le token `SUPABASE_ACCESS_TOKEN` n’est plus nécessaire pour cette sauvegarde.
 
 ### 3. Vérifier le workflow
 
@@ -120,8 +126,9 @@ Ne pas restaurer dans le projet de production existant : créer un projet neuf.
 
 ## Dépannage
 
-- **Docker** : `supabase db dump` utilise l’image Postgres du CLI. Le runner GitHub fournit Docker ; en local, démarrer Docker Desktop. En cas d’échec, utiliser `pg_dump` avec la chaîne Session pooler dans un conteneur `postgres:17`.
-- **Token expiré** : recréer `SUPABASE_ACCESS_TOKEN` et le secret GitHub.
+- **Docker** : le dump utilise l’image `postgres:17` via Docker. Le runner GitHub fournit Docker ; en local, démarrer Docker Desktop.
+- **Connexion base refusée** : vérifier la chaîne Session pooler et le mot de passe dans `SUPABASE_DB_URL`.
+- **Dump sans données** : le workflow vérifie la présence de `COPY`/`INSERT` ; s’il échoue, vérifier que `pg_dump` s’est bien exécuté et que la base contient des lignes.
 - **Clé service_role régénérée** : mettre à jour `SUPABASE_SERVICE_ROLE_KEY` dans GitHub après toute rotation du JWT secret.
 - **Artefact absent** : vérifier que le workflow a bien exécuté l’étape d’upload et que `AGE_PUBLIC_KEY` est une clé publique `age1...` valide.
 - **Photos non restaurées** : vérifier que les chemins locaux correspondent exactement aux `photo_path` de la base.

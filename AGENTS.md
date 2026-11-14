@@ -26,7 +26,7 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - Les actions ont deux modes : intervalle (`interval_value` / `interval_unit`) ou dates fixes annuelles (`annual_dates`, tableau de `MM-DD`). `next_due` reste la source de vérité pour le planning et le cron.
 - `saveLocal` / `saveMute` passent les lignes par `toPlain` (clone JSON) avant Dexie : les proxys réactifs de Svelte ne sont pas clonables par IndexedDB.
 - `EntityPhoto` pousse un état d'historique à l'ouverture d'une image : le bouton retour ferme la visionneuse avant de quitter l'entité.
-- Sauvegarde : `.github/workflows/backup.yml` (hebdomadaire), `scripts/backup-photos.mjs`, procédure `docs/backup-restore.md`. Secrets GitHub : `SUPABASE_ACCESS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, variable `SUPABASE_PROJECT_REF`, variable `AGE_PUBLIC_KEY`.
+- Sauvegarde : `.github/workflows/backup.yml` (hebdomadaire), `scripts/backup-photos.mjs`, procédure `docs/backup-restore.md`. Secrets GitHub : `SUPABASE_DB_URL`, `SUPABASE_SERVICE_ROLE_KEY`, variables `SUPABASE_PROJECT_REF`, `AGE_PUBLIC_KEY`.
 
 ## Règles à ne pas casser
 

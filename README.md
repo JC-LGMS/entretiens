@@ -264,7 +264,9 @@ Une sauvegarde logique hebdomadaire est produite par GitHub Actions (`.github/wo
 - Copie du bucket `photos` via `scripts/backup-photos.mjs`.
 - Archive chiffrée avec `age`, publiée en artefact GitHub pendant **180 jours** (dépôt privé ; 90 maximum en public).
 
-Secrets/variables à configurer : `SUPABASE_ACCESS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `AGE_PUBLIC_KEY`. La clé privée `age` doit être conservée dans le gestionnaire de mots de passe ; sans elle, les archives sont illisibles.
+Secrets/variables à configurer : `SUPABASE_DB_URL` (Session pooler), `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `AGE_PUBLIC_KEY`. La clé privée `age` doit être conservée dans le gestionnaire de mots de passe ; sans elle, les archives sont illisibles.
+
+`SUPABASE_ACCESS_TOKEN` n’est plus utilisé par la sauvegarde : il peut être supprimé des secrets GitHub ou conservé pour d’autres usages CLI.
 
 La procédure de restauration complète est dans [`docs/backup-restore.md`](docs/backup-restore.md).
 

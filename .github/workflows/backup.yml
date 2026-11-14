@@ -18,36 +18,37 @@ jobs:
     timeout-minutes: 30
     env:
       SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || secrets.SUPABASE_PROJECT_REF }}
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       AGE_PUBLIC_KEY: ${{ vars.AGE_PUBLIC_KEY || secrets.AGE_PUBLIC_KEY }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
 
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
       - name: Vérifier la configuration
         run: |
           : "${SUPABASE_PROJECT_REF:?SUPABASE_PROJECT_REF manquant}"
-          : "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN manquant}"
+          : "${SUPABASE_DB_URL:?SUPABASE_DB_URL manquant}"
           : "${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY manquant}"
           : "${AGE_PUBLIC_KEY:?AGE_PUBLIC_KEY manquant}"
 
-      - name: Dump du schéma public
+      - name: Dump complet du schéma public
         run: |
           mkdir -p backup
-          supabase db dump --remote="$SUPABASE_PROJECT_REF" --schema=public --file=backup/public.sql --yes
+          docker run --rm \
+            -e SUPABASE_DB_URL \
+            -v "$PWD/backup:/backup" \
+            postgres:17 \
+            sh -c 'pg_dump "$SUPABASE_DB_URL" --schema=public --no-owner --no-privileges --file=/backup/public.sql'
           test -s backup/public.sql
+          grep -qE '^(COPY|INSERT INTO)' backup/public.sql || (echo "Le dump ne contient aucune donnée" && exit 1)
 
       - name: Copie des photos
         run: |
@@ -74,7 +75,7 @@ jobs:
             echo "- Empreinte : \`$(cut -d' ' -f1 checksums.txt)\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: entretiens-backup-${{ github.run_id }}
           path: |
