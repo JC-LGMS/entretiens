@@ -6,7 +6,7 @@ La sauvegarde est un workflow GitHub Actions hebdomadaire qui produit une archiv
 - `backup/photos/` : tous les objets du bucket `photos` ;
 - une empreinte SHA-256 de l’archive chiffrée.
 
-Les artefacts sont conservés **90 jours** dans GitHub (maximum d’un dépôt public ; 180 ou plus si le dépôt est privé). Ils sont chiffrés avec une clé `age` avant l’envoi.
+Les artefacts sont conservés **180 jours** dans GitHub (dépôt privé ; 90 maximum en public). Ils sont chiffrés avec une clé `age` avant l’envoi.
 
 ## Mise en place
 
