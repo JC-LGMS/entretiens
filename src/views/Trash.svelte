@@ -1,6 +1,7 @@
 <script lang="ts">
   import { liveQuery } from 'dexie'
   import { db, saveLocal } from '../lib/db'
+  import { recalculateAction } from '../lib/actions'
   import { formatShort } from '../lib/dates'
   import type { ActionRow, EntityRow, LogRow } from '../lib/types'
 
@@ -26,10 +27,18 @@
   const actionEntity = (actionId: string) => actionLabel(actionId)
 
   async function restore(table: 'entities' | 'actions' | 'logs', row: { id: string }) {
-    const target = table === 'entities' ? db.entities : table === 'actions' ? db.actions : db.logs
+    const now = new Date().toISOString()
+    if (table === 'logs') {
+      const log = await db.logs.get(row.id)
+      if (!log) return
+      await saveLocal('logs', { ...log, deleted_at: null, updated_at: now })
+      await recalculateAction(log.action_id)
+      return
+    }
+    const target = table === 'entities' ? db.entities : db.actions
     const full = await target.get(row.id)
     if (!full) return
-    await saveLocal(table, { ...full, deleted_at: null, updated_at: new Date().toISOString() })
+    await saveLocal(table, { ...full, deleted_at: null, updated_at: now })
   }
 
   async function restoreEntityWithActions(entity: EntityRow) {
