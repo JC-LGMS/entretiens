@@ -268,7 +268,7 @@ Une sauvegarde logique hebdomadaire est produite par GitHub Actions (`.github/wo
 
 - Dump du schéma `public` (tables, données, RLS, triggers).
 - Copie des buckets `photos` et `attachments` via `scripts/backup-photos.mjs`.
-- Archive chiffrée avec `age`, publiée en artefact GitHub pendant **180 jours** (dépôt privé ; 90 maximum en public).
+- Archive chiffrée avec `age`, publiée en artefact GitHub pendant **90 jours** (maximum autorisé sur ce dépôt).
 
 Secrets/variables à configurer : `SUPABASE_DB_URL` (Session pooler), `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `AGE_PUBLIC_KEY`. La clé privée `age` doit être conservée dans le gestionnaire de mots de passe ; sans elle, les archives sont illisibles.
 

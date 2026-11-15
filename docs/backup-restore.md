@@ -7,7 +7,7 @@ La sauvegarde est un workflow GitHub Actions hebdomadaire qui produit une archiv
 - `backup/attachments/` : photos d’action et documents du bucket `attachments` ;
 - une empreinte SHA-256 de l’archive chiffrée.
 
-Les artefacts sont conservés **180 jours** dans GitHub (dépôt privé ; 90 maximum en public). Ils sont chiffrés avec une clé `age` avant l’envoi.
+Les artefacts sont conservés **90 jours** dans GitHub (maximum autorisé sur ce dépôt). Ils sont chiffrés avec une clé `age` avant l'envoi.
 
 ## Mise en place
 

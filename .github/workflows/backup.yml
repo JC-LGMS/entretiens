@@ -50,7 +50,7 @@ jobs:
           test -s backup/public.sql
           grep -qE '^(COPY|INSERT INTO)' backup/public.sql || (echo "Le dump ne contient aucune donnée" && exit 1)
 
-      - name: Copie des photos
+      - name: Copie des photos et pièces jointes
         run: |
           SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co" \
           PHOTOS_DEST=backup \
@@ -81,5 +81,5 @@ jobs:
           path: |
             entretiens-backup-*.tar.gz.age
             checksums.txt
-          retention-days: 180
+          retention-days: 90
           if-no-files-found: error
