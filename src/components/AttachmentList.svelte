@@ -4,22 +4,30 @@
   import { deleteAttachment, saveAttachment } from '../lib/attachments'
   import type { AttachmentOwner, AttachmentRow } from '../lib/types'
   import AttachmentThumb from './AttachmentThumb.svelte'
+  import Icon from './Icon.svelte'
 
   let {
     ownerType,
     ownerId,
     accept = 'image/*',
-    label = 'Ajouter une photo'
+    label = 'Ajouter une photo',
+    editable = true,
+    deletable = true,
+    emptyLabel = ''
   }: {
     ownerType: AttachmentOwner
     ownerId: string
     accept?: string
     label?: string
+    editable?: boolean
+    deletable?: boolean
+    emptyLabel?: string
   } = $props()
 
   let attachments = $state<AttachmentRow[]>([])
   let title = $state('')
   let file = $state<File | null>(null)
+  let fileInput = $state<HTMLInputElement | null>(null)
   let busy = $state(false)
   let error = $state('')
 
@@ -53,8 +61,7 @@
       await saveAttachment(ownerType, ownerId, file, title)
       title = ''
       file = null
-      const input = document.getElementById(`file-${ownerId}`) as HTMLInputElement | null
-      if (input) input.value = ''
+      if (fileInput) fileInput.value = ''
     } catch (err) {
       error = err instanceof Error ? err.message : String(err)
     } finally {
@@ -68,26 +75,42 @@
   }
 </script>
 
-<div class="attachment-grid">
-  {#each attachments as row (row.id)}
-    <div class="attachment-item">
-      <AttachmentThumb attachment={row} />
-      <button class="btn btn-sm btn-ghost tiny" onclick={() => remove(row)}>Supprimer</button>
-    </div>
-  {/each}
-</div>
+{#if attachments.length === 0 && emptyLabel}
+  <p class="muted tiny">{emptyLabel}</p>
+{:else if attachments.length > 0}
+  <div class="attachment-grid">
+    {#each attachments as row (row.id)}
+      <div class="attachment-item">
+        <AttachmentThumb attachment={row} />
+        {#if deletable}
+          <button
+            type="button"
+            class="btn btn-ghost icon-btn attachment-delete"
+            aria-label={`Supprimer ${row.title}`}
+            title="Supprimer"
+            onclick={() => remove(row)}
+          >
+            <Icon name="trash" size={13} />
+          </button>
+        {/if}
+      </div>
+    {/each}
+  </div>
+{/if}
 
-<form class="row wrap" style="margin-top:8px" onsubmit={add}>
-  <input
-    type="text"
-    bind:value={title}
-    placeholder="Titre (optionnel)"
-    aria-label="Titre de la pièce jointe"
-    style="flex:1;min-width:130px"
-  />
-  <input id={`file-${ownerId}`} type="file" {accept} onchange={onfile} />
-  <button class="btn btn-sm btn-soft" type="submit" disabled={busy}>
-    {busy ? '…' : label}
-  </button>
-</form>
-{#if error}<p class="error" style="margin-top:8px">{error}</p>{/if}
+{#if editable}
+  <form class="row wrap" style="margin-top:8px" onsubmit={add}>
+    <input
+      type="text"
+      bind:value={title}
+      placeholder="Titre (optionnel)"
+      aria-label="Titre de la pièce jointe"
+      style="flex:1;min-width:130px"
+    />
+    <input bind:this={fileInput} type="file" {accept} onchange={onfile} />
+    <button class="btn btn-sm btn-soft" type="submit" disabled={busy}>
+      {busy ? '…' : label}
+    </button>
+  </form>
+  {#if error}<p class="error" style="margin-top:8px">{error}</p>{/if}
+{/if}

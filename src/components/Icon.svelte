@@ -1,5 +1,13 @@
 <script lang="ts">
-  export type IconName = 'calendar' | 'entities' | 'settings' | 'sun' | 'moon' | 'users'
+  export type IconName =
+    | 'calendar'
+    | 'entities'
+    | 'settings'
+    | 'sun'
+    | 'moon'
+    | 'users'
+    | 'edit'
+    | 'trash'
 
   let {
     name,
@@ -39,5 +47,11 @@
     <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
   {:else if name === 'moon'}
     <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 7 7 0 1 0 20 14.5Z" />
+  {:else if name === 'edit'}
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  {:else if name === 'trash'}
+    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+    <path d="M10 11v6M14 11v6" />
   {/if}
 </svg>

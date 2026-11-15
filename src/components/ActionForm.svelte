@@ -14,31 +14,44 @@
     todayISO
   } from '../lib/dates'
   import { joinSummary, describeChange } from '../lib/summary'
+  import type { ActionTemplate } from '../lib/templates'
   import { UNITS, type ActionRow, type IntervalUnit, type ProfileRow } from '../lib/types'
+  import AttachmentList from './AttachmentList.svelte'
   import Modal from './Modal.svelte'
 
   let {
     entityId,
     entityName,
     action,
+    template,
     onclose
-  }: { entityId: string; entityName?: string; action?: ActionRow; onclose: () => void } = $props()
+  }: {
+    entityId: string
+    entityName?: string
+    action?: ActionRow
+    template?: ActionTemplate
+    onclose: () => void
+  } = $props()
 
   type Mode = 'interval' | 'annual'
 
   const initial = untrack(() => ({
-    label: action?.label ?? '',
-    description: action?.description ?? '',
-    value: action?.interval_value ?? 1,
-    unit: action?.interval_unit ?? ('year' as IntervalUnit),
-    nextDue: action?.next_due ?? todayISO(),
+    label: action?.label ?? template?.label ?? '',
+    description: action?.description ?? template?.description ?? '',
+    value: action?.interval_value ?? template?.intervalValue ?? 1,
+    unit: action?.interval_unit ?? template?.intervalUnit ?? ('year' as IntervalUnit),
+    nextDue:
+      action?.next_due ??
+      (template
+        ? addInterval(todayISO(), template.intervalValue, template.intervalUnit)
+        : todayISO()),
     active: action?.active ?? true,
     mode: (action?.annual_dates?.length ? 'annual' : 'interval') as Mode,
     annualDates: [...(action?.annual_dates ?? [])],
     assigned: action?.assigned_profile_id ?? '',
     lead: action?.notify_lead_days ?? 0,
-    repeat: action?.overdue_repeat_days ?? 0,
-    checklist: (action?.checklist ?? []).join('\n')
+    repeat: action?.overdue_repeat_days ?? 1,
+    checklist: (action?.checklist ?? template?.checklist ?? []).join('\n')
   }))
   let label = $state(initial.label)
   let description = $state(initial.description)
@@ -374,4 +387,22 @@
       </button>
     </div>
   </form>
+
+  {#if action}
+    <div class="section-title" style="margin-top:16px"><h2>Photos</h2></div>
+    <p class="muted tiny" style="margin-bottom:8px">
+      Cliquez sur une photo pour l’agrandir. Le titre s’affiche sous la photo.
+    </p>
+    <AttachmentList
+      ownerType="action"
+      ownerId={action.id}
+      accept="image/*"
+      label="Ajouter une photo"
+      emptyLabel="Aucune photo pour cette action."
+    />
+  {:else}
+    <p class="muted tiny" style="margin-top:12px">
+      Enregistrez l’action pour pouvoir ajouter des photos.
+    </p>
+  {/if}
 </Modal>

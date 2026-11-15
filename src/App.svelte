@@ -118,10 +118,20 @@
       </div>
     {/if}
 
+    {#if app.conflicts > 0}
+      <button type="button" class="conflict-banner" onclick={() => (showSync = true)}>
+        <span>
+          ⚠️ {app.conflicts} conflit{app.conflicts > 1 ? 's' : ''} de synchronisation à résoudre.
+        </span>
+        <span class="conflict-action">Traiter</span>
+      </button>
+    {/if}
+
     <header class="topbar">
-      <div class="brand">
+      <a class="brand" href="#/" aria-label="Entretiens, retour au planning">
+        <span class="brand-logo" aria-hidden="true">🌿</span>
         <strong>Entretiens</strong>
-      </div>
+      </a>
 
       <nav class="desktop-nav" aria-label="Navigation">
         <a href="#/" class:active={route.current.name === 'planning'}><Icon name="calendar" size={16} /> Planning</a>

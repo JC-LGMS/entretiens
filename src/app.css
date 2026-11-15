@@ -144,9 +144,29 @@ h3 {
 
 .topbar .brand {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   flex: 1;
   min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.topbar .brand .brand-logo {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  font-size: 1.1rem;
+}
+
+.topbar .brand strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topbar .brand small {
@@ -487,6 +507,21 @@ textarea {
   object-fit: contain;
 }
 
+.lightbox-figure {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-height: 100%;
+}
+
+.lightbox-caption {
+  color: #f4f6f4;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 .lightbox-backdrop {
   position: absolute;
   inset: 0;
@@ -551,8 +586,11 @@ textarea {
 }
 
 .action-head strong {
-  flex: 1;
   min-width: 0;
+}
+
+.action-head > .badge {
+  margin-left: auto;
 }
 
 .action-meta {
@@ -961,6 +999,34 @@ textarea {
   font-size: 0.88rem;
 }
 
+.conflict-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--overdue) 35%, var(--line));
+  background: var(--overdue-bg);
+  color: var(--overdue);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.conflict-banner .conflict-action {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--overdue);
+  color: var(--surface);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .sync-button {
   display: grid;
   place-items: center;
@@ -974,7 +1040,6 @@ textarea {
 }
 
 .pencil-btn {
-  margin-left: auto;
   width: 34px;
   height: 34px;
   min-height: 34px;
@@ -995,11 +1060,54 @@ textarea {
 }
 
 .action-card.today {
-  box-shadow: inset 4px 0 0 var(--today), var(--shadow);
+  box-shadow: inset 0 0 0 2px var(--today), var(--shadow);
 }
 
 .action-card.later {
-  box-shadow: inset 4px 0 0 var(--later), var(--shadow);
+  box-shadow: inset 0 0 0 2px var(--later), var(--shadow);
+}
+
+.action-title {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.action-title:hover strong,
+.action-title:focus-visible strong {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.selected-hint {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.action-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .action-card.highlighted {
@@ -1025,6 +1133,69 @@ textarea {
   display: grid;
   gap: 4px;
   justify-items: center;
+}
+
+.attachment-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.attachment-title {
+  display: block;
+  max-width: 84px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-delete {
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  margin-top: -6px;
+}
+
+.entity-documents {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.pending-doc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.pending-doc input[type='text'] {
+  grid-column: 1 / -1;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.calendar-range {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.calendar-today {
+  flex: none;
 }
 
 .attachment-preview {

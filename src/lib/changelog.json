@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.8.0",
+    "date": "2026-11-15",
+    "changes": [
+      "Planning navigable, alerte de conflits, fiches entité et modèles enrichis"
+    ]
+  },
+  {
     "version": "0.7.0",
     "date": "2026-11-15",
     "changes": [

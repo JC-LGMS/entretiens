@@ -3,9 +3,11 @@
   import { app } from '../lib/state.svelte'
   import { recordHistory } from '../lib/history'
   import { saveLocal, softDelete, db } from '../lib/db'
+  import { saveAttachment } from '../lib/attachments'
   import { removeEntityPhoto, setEntityPhoto } from '../lib/photos'
   import { joinSummary, describeChange } from '../lib/summary'
   import { KINDS, type EntityRow, type Kind } from '../lib/types'
+  import AttachmentList from './AttachmentList.svelte'
   import EntityPhoto from './EntityPhoto.svelte'
   import Modal from './Modal.svelte'
 
@@ -28,6 +30,27 @@
   let file = $state<File | null>(null)
   let busy = $state(false)
   let error = $state('')
+  let pendingDocs = $state<{ id: string; title: string; file: File | null }[]>([])
+
+  function addDoc() {
+    pendingDocs = [...pendingDocs, { id: crypto.randomUUID(), title: '', file: null }]
+  }
+
+  function removeDoc(id: string) {
+    pendingDocs = pendingDocs.filter((doc) => doc.id !== id)
+  }
+
+  function setDocFile(id: string, event: Event) {
+    const input = event.currentTarget as HTMLInputElement
+    const chosen = input.files?.[0] ?? null
+    pendingDocs = pendingDocs.map((doc) => (doc.id === id ? { ...doc, file: chosen } : doc))
+  }
+
+  async function savePendingDocs(entityId: string): Promise<void> {
+    for (const doc of pendingDocs) {
+      if (doc.file) await saveAttachment('entity', entityId, doc.file, doc.title)
+    }
+  }
 
   function onphoto(event: Event) {
     const input = event.currentTarget as HTMLInputElement
@@ -61,6 +84,7 @@
         await recordHistory(row.id, null, app.profileId, 'entity_created', 'Entité créée')
         let saved = row
         if (file) saved = await setEntityPhoto(row, file)
+        await savePendingDocs(row.id)
         onclose()
         onsaved?.(saved)
         return
@@ -89,6 +113,7 @@
         saved = await setEntityPhoto(updated, file)
         await recordHistory(entity.id, null, app.profileId, 'photo_updated', 'Photo modifiée')
       }
+      await savePendingDocs(entity.id)
       onclose()
       onsaved?.(saved)
     } catch (err) {
@@ -170,6 +195,50 @@
       <span>Photo</span>
       <input type="file" accept="image/*" onchange={onphoto} />
     </label>
+
+    <div class="field">
+      <span>Documents</span>
+      {#if entity}
+        <AttachmentList
+          ownerType="entity"
+          ownerId={entity.id}
+          accept="image/*,application/pdf"
+          editable={false}
+          emptyLabel="Aucun document pour cette entité."
+        />
+      {/if}
+
+      {#each pendingDocs as doc (doc.id)}
+        <div class="pending-doc">
+          <input
+            type="text"
+            bind:value={doc.title}
+            placeholder="Titre du document"
+            aria-label="Titre du document"
+          />
+          <input
+            type="file"
+            accept="image/*,application/pdf"
+            aria-label="Fichier du document"
+            onchange={(event) => setDocFile(doc.id, event)}
+          />
+          <button
+            type="button"
+            class="btn btn-ghost icon-btn"
+            aria-label="Retirer ce document"
+            title="Retirer"
+            onclick={() => removeDoc(doc.id)}
+          >✕</button>
+        </div>
+      {/each}
+
+      <button type="button" class="btn btn-sm" style="margin-top:8px" onclick={addDoc}>
+        ＋ Ajouter un document
+      </button>
+      <p class="muted tiny" style="margin-top:6px">
+        Les documents ajoutés ici sont enregistrés avec l’entité.
+      </p>
+    </div>
 
     {#if error}<p class="error">{error}</p>{/if}
 

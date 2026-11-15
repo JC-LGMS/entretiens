@@ -24,13 +24,40 @@
   let entities = $state<EntityRow[]>([])
   let query = $state('')
   let onlyMine = $state(false)
-  let view = $state<'list' | 'week' | '2weeks' | 'month'>('list')
+  type PlanningView = 'list' | 'week' | '2weeks' | 'month'
+  const VIEW_KEY = 'planning.view'
+  const ANCHOR_KEY = 'planning.anchor'
+
+  function loadView(): PlanningView {
+    const saved =
+      typeof localStorage === 'undefined' ? null : localStorage.getItem(VIEW_KEY)
+    return saved === 'week' || saved === '2weeks' || saved === 'month' ? saved : 'list'
+  }
+
+  function loadAnchor(): string {
+    const saved =
+      typeof localStorage === 'undefined' ? null : localStorage.getItem(ANCHOR_KEY)
+    return saved && /^\d{4}-\d{2}-\d{2}$/.test(saved) ? saved : todayISO()
+  }
+
+  let view = $state<PlanningView>(loadView())
+  let anchor = $state(loadAnchor())
   let doneItem = $state<Item | null>(null)
   let showEntityForm = $state(false)
   let showEntityPicker = $state(false)
   let actionEntityId = $state<string | null>(null)
   let actionEntityName = $state('')
   let createForAction = $state(false)
+
+  $effect(() => {
+    const next = view
+    if (typeof localStorage !== 'undefined') localStorage.setItem(VIEW_KEY, next)
+  })
+
+  $effect(() => {
+    const next = anchor
+    if (typeof localStorage !== 'undefined') localStorage.setItem(ANCHOR_KEY, next)
+  })
 
   $effect(() => {
     const profileId = app.profileId
@@ -204,7 +231,7 @@
     </div>
   {/each}
 {:else}
-  <PlanningCalendar items={filteredItems} view={view} />
+  <PlanningCalendar items={filteredItems} view={view} bind:anchor />
 {/if}
 
 {#if showEntityForm}

@@ -153,17 +153,24 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 - La modale d'action indique l'entité concernée et propose une description.
 - Clic sur la photo d'une entité : elle s'affiche en grand.
 - « C'est fait » : le journal et l'historique se mettent à jour, sans erreur IndexedDB.
-- Le planning affiche la photo de l'entité, un liseré complet rouge ou jaune selon l'urgence, la recherche d'actions, et la date + le nombre de jours à droite.
+- Le planning affiche la photo de l'entité, un liseré complet selon l'urgence, la recherche d'actions, et la date + le nombre de jours à droite.
 - Le planning propose les vues liste, semaine, 2 semaines et mois, ainsi que le filtre « Mes actions ».
+- Dans les vues semaine, 2 semaines et mois, les flèches permettent d'avancer ou de reculer, et « Aujourd'hui » revient à la période courante.
+- La vue et la période du planning sont conservées sur l'appareil : après l'ouverture d'une action, le retour affiche la même période.
 - « C'est fait » est disponible directement depuis le planning, avec coût et checklist.
 - La date du jour et le nombre d'actions sont à droite du titre Planning.
 - Un clic sur une action ouvre la fiche de l'entité, met l'action en avant et recentre la vue ; le retour pointe vers Planning.
+- Le titre de l'application et le logo ramènent au planning.
+- Un conflit de synchronisation affiche une bannière d'alerte qui ouvre directement le dialogue de résolution.
 - Une action peut être récurrente par intervalle (unité par défaut : an) ou par dates fixes (deux dates préremplies).
-- Chaque action peut être assignée à un profil, avoir un délai de rappel et une relance des retards.
+- Chaque action peut être assignée à un profil, avoir un délai de rappel et une relance des retards (1 jour par défaut).
+- Les modèles proposent notamment poêle à granulés, pompe à chaleur, déclaration BIC et déclaration de revenus ; un clic ouvre le formulaire prérempli avec la checklist du modèle.
 - Archiver une action ou une entité : disparition du planning, historique conservé, restauration possible.
 - Le bouton de silence masque le rappel pour le profil courant, par entité ou par action.
 - Réglages > Comptes et historiques : renommer, fusionner, supprimer les profils sans activité.
-- Fiche entité : réalisations et modifications séparées ; modification/suppression/annulation d'une réalisation ; documents et photos avec titre ; garantie, coût total, checklist.
+- Fiche entité : actions colorées et liseré complet, titre cliquable et crayon adjacent, réalisations et modifications séparées, modification/suppression/annulation d'une réalisation par icônes, documents et photos avec titre, coût total par action, garantie et checklist.
+- Les photos d'action s'ajoutent en modifiant l'action ; elles s'ouvrent en modale et affichent leur titre sous la photo.
+- Les documents d'entité s'ajoutent à la création ou à la modification de l'entité et restent visibles dans le bloc de l'entité.
 - Corbeille : restaurer une entité, une action ou une réalisation supprimée.
 - Sauvegarde utilisateur : export/import ZIP (JSON + photos + documents).
 - Indicateur de synchronisation cliquable : file d'attente, erreur, conflits et résolution.
@@ -232,12 +239,12 @@ Un hook Git `pre-commit` est installé par `npm install` (script `prepare`). Il 
 ## 11. Fonctionnement
 
 - **Profils déclaratifs** : un seul compte d'accès, plusieurs profils. Le profil courant est stocké dans IndexedDB et sert à signer les journaux et les préférences de notification.
-- **Entités** : équipement, plante ou administratif, avec photo, documents joints, garantie et coût total. Une entité peut être archivée pour la retirer du planning sans perdre son historique.
-- **Actions** : libellé, description libre, assignation à un profil, récurrence par intervalle ou dates fixes, délai de rappel, relance des retards, checklist et photos avec titre. Une action peut être archivée ou désactivée.
-- **Réalisation** : crée un journal, met à jour `last_done` et recalcule `next_due` (intervalle ou prochaine date fixe).
-- **Planning** : page d'accueil. Photo de l'entité, liseré complet rouge ou jaune selon l'urgence, recherche, filtre « Mes actions », vues liste/semaine/2 semaines/mois, date du jour et nombre d'actions à droite du titre. « C'est fait » depuis le planning. Un clic sur une action ouvre la fiche et met l'action en avant. Le silence par profil masque le rappel push mais laisse l'échéance visible.
-- **Historique** : réalisations et modifications séparées ; modification, suppression et annulation d'une réalisation. Le titre Modifications est cliquable ; les commentaires sont mis en évidence.
-- **Photos et documents** : photo d'entité agrandissable ; photos d'action avec titre ; documents PDF/image sur l'entité.
+- **Entités** : équipement, plante ou administratif, avec photo, documents joints, garantie et coût total. Une entité peut être archivée pour la retirer du planning sans perdre son historique. Les documents s'ajoutent depuis le formulaire d'entité et restent consultables dans le bloc de l'entité.
+- **Actions** : libellé, description libre, assignation à un profil, récurrence par intervalle ou dates fixes, délai de rappel, relance des retards (1 jour par défaut), checklist et photos avec titre. Une action peut être archivée ou désactivée. Le titre et le crayon ouvrent la modification ; les photos s'ajoutent depuis ce formulaire.
+- **Réalisation** : crée un journal, met à jour `last_done` et recalcule `next_due` (intervalle ou prochaine date fixe). Le coût saisi alimente le coût total de l'action.
+- **Planning** : page d'accueil. Photo de l'entité, liseré complet selon l'urgence, recherche, filtre « Mes actions », vues liste/semaine/2 semaines/mois avec navigation de périodes, date du jour et nombre d'actions à droite du titre. La vue et la période sont conservées par appareil. « C'est fait » depuis le planning. Un clic sur une action ouvre la fiche et met l'action en avant. Le silence par profil masque le rappel push mais laisse l'échéance visible.
+- **Historique** : réalisations et modifications séparées ; modification, suppression et annulation d'une réalisation par icônes. Le titre Modifications est cliquable ; les commentaires sont mis en évidence.
+- **Photos et documents** : photo d'entité agrandissable ; photos d'action avec titre et ouverture en modale ; documents PDF/image ajoutés via le formulaire d'entité.
 - **Corbeille** : restaurer entité, action ou réalisation.
 - **Thème** : icône clair/sombre dans l'en-tête, ou Système/Clair/Sombre dans Réglages, enregistré par appareil. Le thème applique explicitement `data-theme` et `color-scheme` pour éviter les incohérences de barre d'état sur mobile.
 - **Version** : numéro affiché dans Réglages, changelog de toutes les versions au clic.

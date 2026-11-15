@@ -7,11 +7,13 @@
   import { deleteLog, undoLastLog } from '../lib/actions'
   import { navigate } from '../lib/router.svelte'
   import { app } from '../lib/state.svelte'
+  import type { ActionTemplate } from '../lib/templates'
   import { urgencyOf } from '../lib/urgency'
   import {
     KINDS,
     type ActionMuteRow,
     type ActionRow,
+    type AttachmentRow,
     type EntityRow,
     type HistoryRow,
     type Kind,
@@ -20,10 +22,11 @@
     type ProfileRow
   } from '../lib/types'
   import ActionForm from '../components/ActionForm.svelte'
-  import AttachmentList from '../components/AttachmentList.svelte'
+  import AttachmentThumb from '../components/AttachmentThumb.svelte'
   import DoneDialog from '../components/DoneDialog.svelte'
   import EntityForm from '../components/EntityForm.svelte'
   import EntityPhoto from '../components/EntityPhoto.svelte'
+  import Icon from '../components/Icon.svelte'
   import LogForm from '../components/LogForm.svelte'
   import TemplatePicker from '../components/TemplatePicker.svelte'
   import UrgencyBadge from '../components/UrgencyBadge.svelte'
@@ -39,6 +42,7 @@
     profiles: ProfileRow[]
     mute: ProfileMuteRow | null
     actionMutes: ActionMuteRow[]
+    attachments: AttachmentRow[]
   }
 
   let data = $state<DetailData>({
@@ -49,14 +53,17 @@
     history: [],
     profiles: [],
     mute: null,
-    actionMutes: []
+    actionMutes: [],
+    attachments: []
   })
   let showEntityForm = $state(false)
   let showArchivedActions = $state(false)
   let showModifications = $state(false)
   let showTemplates = $state(false)
   let editingLog = $state<LogRow | null>(null)
-  let actionForm = $state<{ open: boolean; action?: ActionRow }>({ open: false })
+  let actionForm = $state<{ open: boolean; action?: ActionRow; template?: ActionTemplate }>({
+    open: false
+  })
   let doneAction = $state<ActionRow | null>(null)
   let lastFocused = ''
 
@@ -77,6 +84,14 @@
       const actionMutes = profileId
         ? await db.actionMutes.filter((row) => row.profile_id === profileId && !row.deleted_at).toArray()
         : []
+      const attachments = (
+        await db.attachments.where('owner_id').anyOf([entityId, ...ids]).toArray()
+      ).filter(
+        (row) =>
+          !row.deleted_at &&
+          ((row.owner_type === 'entity' && row.owner_id === entityId) ||
+            (row.owner_type === 'action' && ids.includes(row.owner_id)))
+      )
       return {
         entity,
         allActions,
@@ -85,7 +100,8 @@
         history,
         profiles,
         mute,
-        actionMutes
+        actionMutes,
+        attachments
       }
     }).subscribe((value) => {
       data = value
@@ -314,6 +330,39 @@
       .sort((a, b) => b.done_on.localeCompare(a.done_on))
     return logs[0] ?? null
   }
+
+  function actionCost(actionId: string): number {
+    return data.logs
+      .filter(
+        (log) => log.action_id === actionId && !log.deleted_at && typeof log.cost === 'number'
+      )
+      .reduce((sum, log) => sum + (log.cost ?? 0), 0)
+  }
+
+  function money(value: number): string {
+    return value.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+  }
+
+  function actionPhotos(actionId: string): AttachmentRow[] {
+    return data.attachments.filter(
+      (row) => row.owner_type === 'action' && row.owner_id === actionId && !row.deleted_at
+    )
+  }
+
+  const entityDocuments = $derived(
+    data.attachments.filter(
+      (row) => row.owner_type === 'entity' && row.owner_id === data.entity?.id && !row.deleted_at
+    )
+  )
+
+  function editAction(action: ActionRow) {
+    actionForm = { open: true, action }
+  }
+
+  function pickTemplate(template: ActionTemplate) {
+    showTemplates = false
+    actionForm = { open: true, template }
+  }
 </script>
 
 <a
@@ -365,6 +414,29 @@
             Coût total : {totalCost.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
           </p>
         {/if}
+        <div class="entity-documents">
+          <div class="row between wrap" style="margin-bottom:6px">
+            <strong class="tiny">Documents</strong>
+            <span class="muted tiny">
+              {entityDocuments.length
+                ? `${entityDocuments.length} document${entityDocuments.length > 1 ? 's' : ''}`
+                : 'Aucun document'}
+            </span>
+          </div>
+          {#if entityDocuments.length}
+            <div class="attachment-grid">
+              {#each entityDocuments as doc (doc.id)}
+                <div class="attachment-item">
+                  <AttachmentThumb attachment={doc} />
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <p class="muted tiny">
+              Ajoutez des documents en modifiant l’entité.
+            </p>
+          {/if}
+        </div>
       </div>
     </div>
 
@@ -401,24 +473,39 @@
           id={`action-${action.id}`}
         >
           <div class="action-head">
-            <strong>{action.label}</strong>
+            <button
+              type="button"
+              class="action-title"
+              onclick={() => editAction(action)}
+              title="Modifier l’action"
+            >
+              <strong>{action.label}</strong>
+            </button>
+            <button
+              class="btn btn-ghost icon-btn pencil-btn"
+              aria-label={`Modifier ${action.label}`}
+              title="Modifier"
+              onclick={() => editAction(action)}
+            >
+              <Icon name="edit" size={15} />
+            </button>
             {#if action.active}
               <UrgencyBadge nextDue={action.next_due} />
             {:else}
               <span class="badge neutral">Inactive</span>
             {/if}
-            <button
-              class="btn btn-ghost icon-btn pencil-btn"
-              aria-label={`Modifier ${action.label}`}
-              title="Modifier"
-              onclick={() => (actionForm = { open: true, action })}
-            >✎</button>
           </div>
+          {#if focusActionId === action.id}
+            <p class="selected-hint">Action sélectionnée depuis le planning</p>
+          {/if}
           {#if action.description}<p class="muted tiny" style="margin-top:4px">{action.description}</p>{/if}
           <div class="action-meta">
             <span>{intervalLabel(action.interval_value, action.interval_unit)}</span>
             {#if action.last_done}<span>Dernière fois : {formatShort(action.last_done)}</span>{/if}
             <span>Prochaine : {formatShort(action.next_due)}</span>
+            {#if actionCost(action.id) > 0}
+              <span>Coût total : {money(actionCost(action.id))}</span>
+            {/if}
             {#if assigneeName(action)}<span>Assignée à {assigneeName(action)}</span>{/if}
             {#if action.notify_lead_days > 0}<span>Rappel J-{action.notify_lead_days}</span>{/if}
             {#if action.overdue_repeat_days > 0}<span>Relance tous les {action.overdue_repeat_days} j</span>{/if}
@@ -446,13 +533,15 @@
               Archiver
             </button>
           </div>
-          <div class="section-title" style="margin:10px 0 4px"><h2>Photos</h2></div>
-          <AttachmentList
-            ownerType="action"
-            ownerId={action.id}
-            accept="image/*"
-            label="Ajouter une photo"
-          />
+          {#if actionPhotos(action.id).length}
+            <div class="action-photos">
+              {#each actionPhotos(action.id) as photo (photo.id)}
+                <div class="attachment-item">
+                  <AttachmentThumb attachment={photo} />
+                </div>
+              {/each}
+            </div>
+          {/if}
         </div>
       {/each}
     </div>
@@ -476,13 +565,23 @@
             style="opacity:0.72"
           >
             <div class="action-head">
-              <strong>{action.label}</strong>
-              <span class="badge neutral">Archivée</span>
+              <button
+                type="button"
+                class="action-title"
+                onclick={() => editAction(action)}
+                title="Modifier l’action"
+              >
+                <strong>{action.label}</strong>
+              </button>
               <button
                 class="btn btn-ghost icon-btn pencil-btn"
                 aria-label={`Modifier ${action.label}`}
-                onclick={() => (actionForm = { open: true, action })}
-              >✎</button>
+                title="Modifier"
+                onclick={() => editAction(action)}
+              >
+                <Icon name="edit" size={15} />
+              </button>
+              <span class="badge neutral">Archivée</span>
             </div>
             <div class="action-meta">
               <span>{intervalLabel(action.interval_value, action.interval_unit)}</span>
@@ -499,16 +598,6 @@
       </div>
     {/if}
   {/if}
-
-  <div class="section-title"><h2>Documents</h2></div>
-  <div class="card card-pad">
-    <AttachmentList
-      ownerType="entity"
-      ownerId={data.entity.id}
-      accept="image/*,application/pdf"
-      label="Ajouter un document"
-    />
-  </div>
 
   <div class="section-title"><h2>Réalisations</h2></div>
 
@@ -530,9 +619,23 @@
             {#if entry.checklist.length}
               <p class="tiny muted" style="margin-top:4px">Checklist : {entry.checklist.join(', ')}</p>
             {/if}
-            <div class="row wrap" style="margin-top:4px">
-              <button class="btn btn-sm btn-ghost" onclick={() => (editingLog = entry.log)}>Modifier</button>
-              <button class="btn btn-sm btn-danger" onclick={() => removeLog(entry.log)}>Supprimer</button>
+            <div class="row wrap realisation-actions" style="margin-top:4px">
+              <button
+                class="btn btn-sm btn-ghost icon-btn"
+                aria-label="Modifier cette réalisation"
+                title="Modifier"
+                onclick={() => (editingLog = entry.log)}
+              >
+                <Icon name="edit" size={14} />
+              </button>
+              <button
+                class="btn btn-sm btn-danger icon-btn"
+                aria-label="Supprimer cette réalisation"
+                title="Supprimer"
+                onclick={() => removeLog(entry.log)}
+              >
+                <Icon name="trash" size={14} />
+              </button>
               {#if index === 0}
                 <span class="tiny muted">Dernière réalisation</span>
               {/if}
@@ -577,6 +680,7 @@
     entityId={id}
     entityName={data.entity?.name}
     action={actionForm.action}
+    template={actionForm.template}
     onclose={() => (actionForm = { open: false })}
   />
 {/if}
@@ -595,8 +699,8 @@
 
 {#if showTemplates && data.entity}
   <TemplatePicker
-    entityId={data.entity.id}
     entityName={data.entity.name}
+    onpick={pickTemplate}
     onclose={() => (showTemplates = false)}
   />
 {/if}
