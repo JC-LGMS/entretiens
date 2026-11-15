@@ -1,15 +1,31 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { liveQuery } from 'dexie'
-  import { db, saveLocal, saveMute } from '../lib/db'
+  import { db, saveActionMute, saveLocal, saveMute } from '../lib/db'
   import { addInterval, formatShort, intervalLabel, todayISO } from '../lib/dates'
   import { recordHistory } from '../lib/history'
+  import { deleteLog, undoLastLog } from '../lib/actions'
+  import { navigate } from '../lib/router.svelte'
   import { app } from '../lib/state.svelte'
-  import { KINDS, type ActionRow, type EntityRow, type HistoryRow, type Kind, type LogRow, type ProfileMuteRow, type ProfileRow } from '../lib/types'
+  import { urgencyOf } from '../lib/urgency'
+  import {
+    KINDS,
+    type ActionMuteRow,
+    type ActionRow,
+    type EntityRow,
+    type HistoryRow,
+    type Kind,
+    type LogRow,
+    type ProfileMuteRow,
+    type ProfileRow
+  } from '../lib/types'
   import ActionForm from '../components/ActionForm.svelte'
+  import AttachmentList from '../components/AttachmentList.svelte'
   import DoneDialog from '../components/DoneDialog.svelte'
   import EntityForm from '../components/EntityForm.svelte'
   import EntityPhoto from '../components/EntityPhoto.svelte'
+  import LogForm from '../components/LogForm.svelte'
+  import TemplatePicker from '../components/TemplatePicker.svelte'
   import UrgencyBadge from '../components/UrgencyBadge.svelte'
 
   let { id, focusActionId }: { id: string; focusActionId?: string } = $props()
@@ -22,6 +38,7 @@
     history: HistoryRow[]
     profiles: ProfileRow[]
     mute: ProfileMuteRow | null
+    actionMutes: ActionMuteRow[]
   }
 
   let data = $state<DetailData>({
@@ -31,14 +48,50 @@
     logs: [],
     history: [],
     profiles: [],
-    mute: null
+    mute: null,
+    actionMutes: []
   })
   let showEntityForm = $state(false)
   let showArchivedActions = $state(false)
   let showModifications = $state(false)
+  let showTemplates = $state(false)
+  let editingLog = $state<LogRow | null>(null)
   let actionForm = $state<{ open: boolean; action?: ActionRow }>({ open: false })
   let doneAction = $state<ActionRow | null>(null)
   let lastFocused = ''
+
+  $effect(() => {
+    const entityId = id
+    const profileId = app.profileId
+    const sub = liveQuery(async (): Promise<DetailData> => {
+      const entity = (await db.entities.get(entityId)) ?? null
+      const allActions = await db.actions.where('entity_id').equals(entityId).toArray()
+      const ids = allActions.map((action) => action.id)
+      const logs = ids.length ? await db.logs.where('action_id').anyOf(ids).toArray() : []
+      const history = await db.history.where('entity_id').equals(entityId).toArray()
+      const profiles = await db.profiles.toArray()
+      const mute = profileId
+        ? ((await db.profileMutes.where('[profile_id+entity_id]').equals([profileId, entityId]).first()) ??
+          null)
+        : null
+      const actionMutes = profileId
+        ? await db.actionMutes.filter((row) => row.profile_id === profileId && !row.deleted_at).toArray()
+        : []
+      return {
+        entity,
+        allActions,
+        actions: allActions.filter((action) => !action.deleted_at),
+        logs,
+        history,
+        profiles,
+        mute,
+        actionMutes
+      }
+    }).subscribe((value) => {
+      data = value
+    })
+    return () => sub.unsubscribe()
+  })
 
   $effect(() => {
     const actionId = focusActionId
@@ -51,43 +104,19 @@
     })
   })
 
-  $effect(() => {
-    const entityId = id
-    const profileId = app.profileId
-    const sub = liveQuery(async (): Promise<DetailData> => {
-      const entity = (await db.entities.get(entityId)) ?? null
-      const allActions = await db.actions.where('entity_id').equals(entityId).toArray()
-      const ids = allActions.map((a) => a.id)
-      const logs = ids.length ? await db.logs.where('action_id').anyOf(ids).toArray() : []
-      const history = await db.history.where('entity_id').equals(entityId).toArray()
-      const profiles = await db.profiles.toArray()
-      const mute = profileId
-        ? ((await db.profileMutes.where('[profile_id+entity_id]').equals([profileId, entityId]).first()) ??
-          null)
-        : null
-      return {
-        entity,
-        allActions,
-        actions: allActions.filter((a) => !a.deleted_at),
-        logs,
-        history,
-        profiles,
-        mute
-      }
-    }).subscribe((value) => {
-      data = value
-    })
-    return () => sub.unsubscribe()
-  })
-
-  const muted = $derived(Boolean(data.mute?.muted))
+  const muted = $derived(Boolean(data.mute?.muted && !data.mute?.deleted_at))
   const archived = $derived(Boolean(data.entity?.archived))
   const visibleActions = $derived(data.actions.filter((action) => !action.archived))
   const archivedActions = $derived(data.actions.filter((action) => action.archived))
+  const totalCost = $derived(
+    data.logs
+      .filter((log) => !log.deleted_at && typeof log.cost === 'number')
+      .reduce((sum, log) => sum + (log.cost ?? 0), 0)
+  )
 
   const realisations = $derived.by(() => {
-    const labels = new Map(data.allActions.map((a) => [a.id, a.label]))
-    const names = new Map(data.profiles.map((p) => [p.id, p.name]))
+    const labels = new Map(data.allActions.map((action) => [action.id, action.label]))
+    const names = new Map(data.profiles.map((profile) => [profile.id, profile.name]))
     return data.logs
       .filter((log) => !log.deleted_at)
       .map((log) => ({
@@ -95,14 +124,17 @@
         at: new Date(`${log.done_on}T12:00:00`).toISOString(),
         title: `Action « ${labels.get(log.action_id) ?? 'supprimée'} » faite`,
         text: log.comment,
-        who: names.get(log.created_by ?? '') ?? ''
+        cost: log.cost ?? null,
+        checklist: log.checklist_done ?? [],
+        who: names.get(log.created_by ?? '') ?? '',
+        log
       }))
       .sort((a, b) => b.at.localeCompare(a.at))
       .slice(0, 80)
   })
 
   const modifications = $derived.by(() => {
-    const names = new Map(data.profiles.map((p) => [p.id, p.name]))
+    const names = new Map(data.profiles.map((profile) => [profile.id, profile.name]))
     return data.history
       .filter((row) => !row.deleted_at)
       .map((row) => ({
@@ -127,15 +159,24 @@
     })
   }
 
+  function assigneeName(action: ActionRow): string {
+    return data.profiles.find((profile) => profile.id === action.assigned_profile_id)?.name ?? ''
+  }
+
+  function actionMuted(action: ActionRow): boolean {
+    return Boolean(
+      data.actionMutes.find((row) => row.action_id === action.id && row.muted && !row.deleted_at)
+    )
+  }
+
   async function toggleMute() {
     if (!app.profileId || !data.entity) return
     const next = !muted
-    const now = new Date().toISOString()
     await saveMute({
       profile_id: app.profileId,
       entity_id: data.entity.id,
       muted: next,
-      updated_at: now,
+      updated_at: new Date().toISOString(),
       deleted_at: null
     })
     const who = app.profile?.name ?? 'ce profil'
@@ -148,6 +189,28 @@
     )
   }
 
+  async function toggleActionMute(action: ActionRow) {
+    if (!app.profileId || !data.entity) return
+    const next = !actionMuted(action)
+    await saveActionMute({
+      profile_id: app.profileId,
+      action_id: action.id,
+      muted: next,
+      updated_at: new Date().toISOString(),
+      deleted_at: null
+    })
+    const who = app.profile?.name ?? 'ce profil'
+    await recordHistory(
+      data.entity.id,
+      action.id,
+      app.profileId,
+      'notify_toggled',
+      next
+        ? `Notifications coupées pour « ${action.label} » (${who})`
+        : `Notifications réactivées pour « ${action.label} » (${who})`
+    )
+  }
+
   async function snooze(action: ActionRow, days: number) {
     if (!data.entity) return
     const base = action.next_due < todayISO() ? todayISO() : action.next_due
@@ -156,6 +219,7 @@
       ...action,
       next_due: next,
       notified_for: null,
+      last_notified_on: null,
       updated_at: new Date().toISOString()
     })
     await recordHistory(
@@ -201,6 +265,55 @@
       next ? `Action « ${action.label} » archivée` : `Action « ${action.label} » désarchivée`
     )
   }
+
+  async function duplicateEntity() {
+    if (!data.entity) return
+    const now = new Date().toISOString()
+    const copyId = crypto.randomUUID()
+    const entity: EntityRow = {
+      ...data.entity,
+      id: copyId,
+      name: `${data.entity.name} (copie)`,
+      photo_path: null,
+      warranty_notified_on: null,
+      updated_at: now,
+      deleted_at: null
+    }
+    await saveLocal('entities', entity)
+    for (const action of visibleActions) {
+      const row: ActionRow = {
+        ...action,
+        id: crypto.randomUUID(),
+        entity_id: copyId,
+        last_done: null,
+        next_due: action.next_due,
+        last_notified_on: null,
+        notified_for: null,
+        updated_at: now,
+        deleted_at: null
+      }
+      await saveLocal('actions', row)
+    }
+    await recordHistory(copyId, null, app.profileId, 'entity_created', 'Entité dupliquée')
+    navigate(`/entity/${copyId}`)
+  }
+
+  async function removeLog(log: LogRow) {
+    if (!confirm('Supprimer cette réalisation ? L’échéance sera recalculée.')) return
+    await deleteLog(log)
+  }
+
+  async function undo(action: ActionRow) {
+    if (!confirm(`Annuler la dernière réalisation de « ${action.label} » ?`)) return
+    await undoLastLog(action.id)
+  }
+
+  function latestLogFor(action: ActionRow): LogRow | null {
+    const logs = data.logs
+      .filter((log) => log.action_id === action.id && !log.deleted_at)
+      .sort((a, b) => b.done_on.localeCompare(a.done_on))
+    return logs[0] ?? null
+  }
 </script>
 
 <a
@@ -231,6 +344,7 @@
           <h1>{data.entity.name}</h1>
           <div class="row wrap">
             <button class="btn btn-sm" onclick={() => (showEntityForm = true)}>Modifier</button>
+            <button class="btn btn-sm" onclick={duplicateEntity}>Dupliquer</button>
             <button class="btn btn-sm" onclick={toggleEntityArchive}>
               {archived ? 'Désarchiver' : 'Archiver'}
             </button>
@@ -241,6 +355,16 @@
           {#if archived}<span class="badge neutral" style="margin-left:6px">Archivée</span>{/if}
         </p>
         {#if data.entity.notes}<p style="margin-top:6px">{data.entity.notes}</p>{/if}
+        {#if data.entity.warranty_until}
+          <p class="muted tiny" style="margin-top:6px">
+            Garantie jusqu’au {formatShort(data.entity.warranty_until)}
+          </p>
+        {/if}
+        {#if totalCost > 0}
+          <p class="muted tiny" style="margin-top:4px">
+            Coût total : {totalCost.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        {/if}
       </div>
     </div>
 
@@ -257,7 +381,10 @@
 
   <div class="section-title">
     <h2>Actions</h2>
-    <button class="btn btn-sm btn-soft" onclick={() => (actionForm = { open: true })}>+ Ajouter</button>
+    <div class="row wrap">
+      <button class="btn btn-sm btn-ghost" onclick={() => (showTemplates = true)}>Modèles</button>
+      <button class="btn btn-sm btn-soft" onclick={() => (actionForm = { open: true })}>+ Ajouter</button>
+    </div>
   </div>
 
   {#if visibleActions.length === 0}
@@ -269,7 +396,7 @@
     <div class="stack">
       {#each visibleActions as action (action.id)}
         <div
-          class="card action-card"
+          class={`card action-card ${urgencyOf(action.next_due)}`}
           class:highlighted={focusActionId === action.id}
           id={`action-${action.id}`}
         >
@@ -280,13 +407,27 @@
             {:else}
               <span class="badge neutral">Inactive</span>
             {/if}
+            <button
+              class="btn btn-ghost icon-btn pencil-btn"
+              aria-label={`Modifier ${action.label}`}
+              title="Modifier"
+              onclick={() => (actionForm = { open: true, action })}
+            >✎</button>
           </div>
           {#if action.description}<p class="muted tiny" style="margin-top:4px">{action.description}</p>{/if}
           <div class="action-meta">
             <span>{intervalLabel(action.interval_value, action.interval_unit)}</span>
             {#if action.last_done}<span>Dernière fois : {formatShort(action.last_done)}</span>{/if}
             <span>Prochaine : {formatShort(action.next_due)}</span>
+            {#if assigneeName(action)}<span>Assignée à {assigneeName(action)}</span>{/if}
+            {#if action.notify_lead_days > 0}<span>Rappel J-{action.notify_lead_days}</span>{/if}
+            {#if action.overdue_repeat_days > 0}<span>Relance tous les {action.overdue_repeat_days} j</span>{/if}
           </div>
+          {#if action.checklist?.length}
+            <div class="checklist-preview">
+              {#each action.checklist as item (item)}<span class="badge neutral">☐ {item}</span>{/each}
+            </div>
+          {/if}
           <div class="action-buttons">
             {#if action.active}
               <button class="btn btn-sm btn-primary" onclick={() => (doneAction = action)}>C'est fait</button>
@@ -294,10 +435,24 @@
               <button class="btn btn-sm" onclick={() => snooze(action, 1)}>+1 j</button>
               <button class="btn btn-sm" onclick={() => snooze(action, 3)}>+3 j</button>
               <button class="btn btn-sm" onclick={() => snooze(action, 7)}>+7 j</button>
+              {#if latestLogFor(action)}
+                <button class="btn btn-sm btn-ghost" onclick={() => undo(action)}>Annuler la dernière</button>
+              {/if}
             {/if}
-            <button class="btn btn-sm" onclick={() => (actionForm = { open: true, action })}>Modifier</button>
-            <button class="btn btn-sm btn-ghost" onclick={() => toggleActionArchive(action)}>Archiver</button>
+            <button class="btn btn-sm btn-ghost" onclick={() => toggleActionMute(action)}>
+              {actionMuted(action) ? '🔕' : '🔔'}
+            </button>
+            <button class="btn btn-sm btn-ghost archive-btn" onclick={() => toggleActionArchive(action)}>
+              Archiver
+            </button>
           </div>
+          <div class="section-title" style="margin:10px 0 4px"><h2>Photos</h2></div>
+          <AttachmentList
+            ownerType="action"
+            ownerId={action.id}
+            accept="image/*"
+            label="Ajouter une photo"
+          />
         </div>
       {/each}
     </div>
@@ -323,6 +478,11 @@
             <div class="action-head">
               <strong>{action.label}</strong>
               <span class="badge neutral">Archivée</span>
+              <button
+                class="btn btn-ghost icon-btn pencil-btn"
+                aria-label={`Modifier ${action.label}`}
+                onclick={() => (actionForm = { open: true, action })}
+              >✎</button>
             </div>
             <div class="action-meta">
               <span>{intervalLabel(action.interval_value, action.interval_unit)}</span>
@@ -330,8 +490,9 @@
               <span>Prochaine : {formatShort(action.next_due)}</span>
             </div>
             <div class="action-buttons">
-              <button class="btn btn-sm" onclick={() => (actionForm = { open: true, action })}>Modifier</button>
-              <button class="btn btn-sm btn-soft" onclick={() => toggleActionArchive(action)}>Désarchiver</button>
+              <button class="btn btn-sm btn-soft archive-btn" onclick={() => toggleActionArchive(action)}>
+                Désarchiver
+              </button>
             </div>
           </div>
         {/each}
@@ -339,22 +500,43 @@
     {/if}
   {/if}
 
-  <div class="section-title">
-    <h2>Réalisations</h2>
+  <div class="section-title"><h2>Documents</h2></div>
+  <div class="card card-pad">
+    <AttachmentList
+      ownerType="entity"
+      ownerId={data.entity.id}
+      accept="image/*,application/pdf"
+      label="Ajouter un document"
+    />
   </div>
+
+  <div class="section-title"><h2>Réalisations</h2></div>
 
   {#if realisations.length === 0}
     <div class="card empty"><p>Aucune réalisation enregistrée.</p></div>
   {:else}
     <div class="card card-pad">
       <div class="timeline">
-        {#each realisations as entry (entry.id)}
+        {#each realisations as entry, index (entry.id)}
           <div class="timeline-item">
             <p class="realisation-line">
               <span class="when">{when(entry.at)}{entry.who ? ` · ${entry.who}` : ''}</span>
               <span>{entry.title}</span>
+              {#if typeof entry.cost === 'number'}
+                <span class="badge neutral">{entry.cost.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</span>
+              {/if}
             </p>
             {#if entry.text}<p class="realisation-comment">{entry.text}</p>{/if}
+            {#if entry.checklist.length}
+              <p class="tiny muted" style="margin-top:4px">Checklist : {entry.checklist.join(', ')}</p>
+            {/if}
+            <div class="row wrap" style="margin-top:4px">
+              <button class="btn btn-sm btn-ghost" onclick={() => (editingLog = entry.log)}>Modifier</button>
+              <button class="btn btn-sm btn-danger" onclick={() => removeLog(entry.log)}>Supprimer</button>
+              {#if index === 0}
+                <span class="tiny muted">Dernière réalisation</span>
+              {/if}
+            </div>
           </div>
         {/each}
       </div>
@@ -404,5 +586,17 @@
     action={doneAction}
     entityName={data.entity.name}
     onclose={() => (doneAction = null)}
+  />
+{/if}
+
+{#if editingLog}
+  <LogForm log={editingLog} onclose={() => (editingLog = null)} />
+{/if}
+
+{#if showTemplates && data.entity}
+  <TemplatePicker
+    entityId={data.entity.id}
+    entityName={data.entity.name}
+    onclose={() => (showTemplates = false)}
   />
 {/if}

@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.6.0",
+    "date": "2026-11-15",
+    "changes": [
+      "Affectation, rappels avancés, pièces jointes, garanties, corbeille et synchronisation enrichie"
+    ]
+  },
+  {
     "version": "0.5.0",
     "date": "2026-11-13",
     "changes": [

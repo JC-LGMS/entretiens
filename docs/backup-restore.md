@@ -4,6 +4,7 @@ La sauvegarde est un workflow GitHub Actions hebdomadaire qui produit une archiv
 
 - `backup/public.sql` : schéma et données du schéma `public` (tables, données, RLS, triggers) ;
 - `backup/photos/` : tous les objets du bucket `photos` ;
+- `backup/attachments/` : photos d’action et documents du bucket `attachments` ;
 - une empreinte SHA-256 de l’archive chiffrée.
 
 Les artefacts sont conservés **180 jours** dans GitHub (dépôt privé ; 90 maximum en public). Ils sont chiffrés avec une clé `age` avant l’envoi.
@@ -110,9 +111,10 @@ Ne pas restaurer dans le projet de production existant : créer un projet neuf.
    ```bash
    npx supabase db push --remote=<NOUVEAU_REF>
    ```
-6. Remettre les photos aux mêmes chemins :
+6. Remettre les photos et documents aux mêmes chemins :
    ```bash
    npx supabase storage cp -r ./photos ss:///photos --remote=<NOUVEAU_REF> --experimental
+   npx supabase storage cp -r ./attachments ss:///attachments --remote=<NOUVEAU_REF> --experimental
    ```
 7. Recréer le compte partagé dans **Authentication > Users** :
    - même email et même mot de passe ;
@@ -155,7 +157,7 @@ Ne pas restaurer dans le projet de production existant : créer un projet neuf.
 - **Dump sans données** : le workflow vérifie la présence de `COPY`/`INSERT` ; s’il échoue, vérifier que `pg_dump` s’est bien exécuté et que la base contient des lignes.
 - **Clé service_role régénérée** : mettre à jour `SUPABASE_SERVICE_ROLE_KEY` dans GitHub après toute rotation du JWT secret.
 - **Artefact absent** : vérifier que le workflow a bien exécuté l’étape d’upload et que `AGE_PUBLIC_KEY` est une clé publique `age1...` valide.
-- **Photos non restaurées** : vérifier que les chemins locaux correspondent exactement aux `photo_path` de la base.
+- **Photos non restaurées** : vérifier que les chemins locaux correspondent exactement aux `photo_path` de la base, et que `attachments/` a bien été remis dans le bucket `attachments`.
 
 ## Bonnes pratiques
 

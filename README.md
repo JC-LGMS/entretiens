@@ -44,9 +44,9 @@ Après toute modification de `.env.local`, arrêter et relancer `npm run dev`.
    - cet email est `VITE_WORKSPACE_EMAIL`
 4. **Authentication** > **Providers** > **Email** : désactiver « Allow new users to sign up ».
 5. **Authentication** > **Settings** : désactiver les connexions anonymes.
-6. **SQL Editor** > **New query** : exécuter les fichiers de `supabase/migrations/` dans l'ordre (`0001_init.sql`, `0002_archive.sql`, `0003_annual_dates.sql`, `0004_action_description.sql`), ou lancer `npx supabase db push`. Sur une base déjà créée, exécuter les migrations manquantes.
+6. **SQL Editor** > **New query** : exécuter les fichiers de `supabase/migrations/` dans l’ordre (`0001` à `0005`), ou lancer `npx supabase db push`. Sur une base déjà créée, exécuter les migrations manquantes.
 
-La migration crée les tables, les règles RLS, les index et le bucket privé `photos`.
+La migration crée les tables, les règles RLS, les index et les buckets privés `photos` (photos d'entité) et `attachments` (photos d'action et documents).
 
 ## 4. Générer les clés VAPID
 
@@ -154,15 +154,20 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 - Clic sur la photo d'une entité : elle s'affiche en grand.
 - « C'est fait » : le journal et l'historique se mettent à jour, sans erreur IndexedDB.
 - Le planning affiche la photo de l'entité, un liseré complet rouge ou jaune selon l'urgence, la recherche d'actions, et la date + le nombre de jours à droite.
+- Le planning propose les vues liste, semaine, 2 semaines et mois, ainsi que le filtre « Mes actions ».
+- « C'est fait » est disponible directement depuis le planning, avec coût et checklist.
 - La date du jour et le nombre d'actions sont à droite du titre Planning.
 - Un clic sur une action ouvre la fiche de l'entité, met l'action en avant et recentre la vue ; le retour pointe vers Planning.
 - Une action peut être récurrente par intervalle (unité par défaut : an) ou par dates fixes (deux dates préremplies).
+- Chaque action peut être assignée à un profil, avoir un délai de rappel et une relance des retards.
 - Archiver une action ou une entité : disparition du planning, historique conservé, restauration possible.
-- Le bouton de silence masque le rappel pour le profil courant.
-- Réglages > Comptes et historiques : activité de chaque profil, suppression des profils sans activité.
-- Fiche entité : réalisations et modifications séparées ; le titre Modifications est cliquable ; date et titre des réalisations sur la même ligne, commentaires mis en évidence.
-- Sur mobile, le retour ferme l'image agrandie sans quitter l'entité.
-- Le nom du profil n'apparaît plus sous « Entretiens ».
+- Le bouton de silence masque le rappel pour le profil courant, par entité ou par action.
+- Réglages > Comptes et historiques : renommer, fusionner, supprimer les profils sans activité.
+- Fiche entité : réalisations et modifications séparées ; modification/suppression/annulation d'une réalisation ; documents et photos avec titre ; garantie, coût total, checklist.
+- Corbeille : restaurer une entité, une action ou une réalisation supprimée.
+- Sauvegarde utilisateur : export/import ZIP (JSON + photos + documents).
+- Indicateur de synchronisation cliquable : file d'attente, erreur, conflits et résolution.
+- Gestion des appareils push et mise à jour PWA avec bouton.
 - Thème clair/sombre via l'icône de l'en-tête, conservé sur l'appareil, y compris sur mobile.
 - Réglages > Version : numéro au format 0.x et changelog complet.
 - Après un rechargement, les données sont toujours là.
@@ -227,33 +232,34 @@ Un hook Git `pre-commit` est installé par `npm install` (script `prepare`). Il 
 ## 11. Fonctionnement
 
 - **Profils déclaratifs** : un seul compte d'accès, plusieurs profils. Le profil courant est stocké dans IndexedDB et sert à signer les journaux et les préférences de notification.
-- **Entités** : équipement, plante ou administratif, avec photo (compressée et stockée dans Supabase Storage). Une entité peut être archivée pour la retirer du planning sans perdre son historique.
-- **Actions** : libellé, description libre, récurrence par intervalle (jours/semaines/mois/années, unité par défaut : an) ou par dates fixes dans l'année (1er mars, 15 octobre…), prochaine échéance. Une action peut être archivée ou désactivée.
+- **Entités** : équipement, plante ou administratif, avec photo, documents joints, garantie et coût total. Une entité peut être archivée pour la retirer du planning sans perdre son historique.
+- **Actions** : libellé, description libre, assignation à un profil, récurrence par intervalle ou dates fixes, délai de rappel, relance des retards, checklist et photos avec titre. Une action peut être archivée ou désactivée.
 - **Réalisation** : crée un journal, met à jour `last_done` et recalcule `next_due` (intervalle ou prochaine date fixe).
-- **Planning** : page d'accueil. Photo de l'entité, liseré complet rouge ou jaune selon l'urgence, recherche d'actions, date du jour et nombre d'actions à droite du titre. En retard, aujourd'hui, ≤ 7 jours, plus tard. La date et le nombre de jours sont regroupés à droite. Un clic sur une action ouvre la fiche et met l'action en avant. Le silence par profil masque le rappel push mais laisse l'échéance visible.
-- **Historique** : les réalisations (« C'est fait ») sont séparées des modifications moins importantes ; le titre Modifications est cliquable. Les réalisations affichent date et titre sur la même ligne, avec un commentaire mis en évidence.
-- **Photos** : un clic sur la photo d'une entité l'ouvre en grand ; les photos apparaissent dans le sélecteur d'action.
+- **Planning** : page d'accueil. Photo de l'entité, liseré complet rouge ou jaune selon l'urgence, recherche, filtre « Mes actions », vues liste/semaine/2 semaines/mois, date du jour et nombre d'actions à droite du titre. « C'est fait » depuis le planning. Un clic sur une action ouvre la fiche et met l'action en avant. Le silence par profil masque le rappel push mais laisse l'échéance visible.
+- **Historique** : réalisations et modifications séparées ; modification, suppression et annulation d'une réalisation. Le titre Modifications est cliquable ; les commentaires sont mis en évidence.
+- **Photos et documents** : photo d'entité agrandissable ; photos d'action avec titre ; documents PDF/image sur l'entité.
+- **Corbeille** : restaurer entité, action ou réalisation.
 - **Thème** : icône clair/sombre dans l'en-tête, ou Système/Clair/Sombre dans Réglages, enregistré par appareil. Le thème applique explicitement `data-theme` et `color-scheme` pour éviter les incohérences de barre d'état sur mobile.
 - **Version** : numéro affiché dans Réglages, changelog de toutes les versions au clic.
 - **Hors ligne** : toutes les écritures vont dans IndexedDB puis dans une file `outbox`.
 
 ## 12. Synchronisation
 
-Fichiers clés : `src/lib/db.ts`, `src/lib/sync.ts`, `src/lib/photos.ts`.
+Fichiers clés : `src/lib/db.ts`, `src/lib/sync.ts`, `src/lib/photos.ts`, `src/lib/attachments.ts`.
 
-- Chaque écriture passe par `saveLocal` / `saveMute`, qui met à jour IndexedDB et la file `outbox` dans la même transaction.
-- La file est poussée par ordre de dépendance : `profiles` → `entities` → `actions` → `logs` → `history` → `profile_mutes`.
-- Les modifications en attente sont fusionnées par ligne (`table + row_id`).
+- Chaque écriture passe par `saveLocal` / `saveMute` / `saveActionMute`, qui met à jour IndexedDB et la file `outbox` dans la même transaction.
+- La file est poussée par ordre de dépendance : `profiles` → `entities` → `actions` → `action_mutes` → `logs` → `history` → `attachments` → `profile_mutes`.
+- Les modifications en attente sont fusionnées par ligne (`table + row_id`) ; `base_updated_at` conserve la version serveur d'origine.
 - Le serveur pose `updated_at` via trigger ; la synchronisation tire les lignes avec `updated_at >= curseur`.
 - Les suppressions sont logiques (`deleted_at`) : aucun hard delete.
-- Conflit : le dernier push reçu gagne, sauf si une écriture locale est encore en attente (elle gagne).
+- Si la ligne serveur a changé depuis `base_updated_at` et diffère de la version locale, un conflit est enregistré dans `conflicts` et rien n'est poussé pour cette ligne. Le dialogue de synchronisation (indicateur cliquable) permet de garder la version locale ou la version distante.
 - Les photos sont versionnées (`<entity-id>-<timestamp>.jpg`) pour invalider le cache des autres appareils.
 
 ## 13. Rappels push
 
-- `src/lib/push.ts` abonne l'appareil et enregistre l'abonnement dans `push_subscriptions`.
-- `supabase/functions/send-reminders/index.ts` sélectionne les actions dont `next_due = aujourd'hui`, envoie à tous les abonnements, puis marque `notified_for`.
-- Le service worker (`src/sw.ts`) lit le profil courant et `profile_mutes` dans IndexedDB ; si l'entité est coupée pour ce profil, il n'affiche rien.
+- `src/lib/push.ts` abonne l'appareil et enregistre l'abonnement (libellé d'appareil, dernière activité) dans `push_subscriptions`.
+- `supabase/functions/send-reminders/index.ts` notifie à J-`notify_lead_days`, relance les retards selon `overdue_repeat_days`, prévient 30 jours avant et le jour de la fin de garantie, puis marque `last_notified_on` / `warranty_notified_on`.
+- Le service worker (`src/sw.ts`) lit le profil courant, `profile_mutes` et `action_mutes` dans IndexedDB ; si l'entité ou l'action est coupée pour ce profil, il n'affiche rien.
 - Un échec du cron un jour donné ne rattrape pas le rappel manqué ; l'échéance reste visible dans le planning.
 
 ## Sauvegarde
@@ -261,7 +267,7 @@ Fichiers clés : `src/lib/db.ts`, `src/lib/sync.ts`, `src/lib/photos.ts`.
 Une sauvegarde logique hebdomadaire est produite par GitHub Actions (`.github/workflows/backup.yml`), le dimanche à 03:00 UTC, avec lancement manuel possible.
 
 - Dump du schéma `public` (tables, données, RLS, triggers).
-- Copie du bucket `photos` via `scripts/backup-photos.mjs`.
+- Copie des buckets `photos` et `attachments` via `scripts/backup-photos.mjs`.
 - Archive chiffrée avec `age`, publiée en artefact GitHub pendant **180 jours** (dépôt privé ; 90 maximum en public).
 
 Secrets/variables à configurer : `SUPABASE_DB_URL` (Session pooler), `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `AGE_PUBLIC_KEY`. La clé privée `age` doit être conservée dans le gestionnaire de mots de passe ; sans elle, les archives sont illisibles.
@@ -278,6 +284,8 @@ La procédure de restauration complète est dans [`docs/backup-restore.md`](docs
 - Les données restent en cache local (IndexedDB) après déconnexion sur un appareil.
 - Le filtrage des notifications par profil se fait côté service worker : l'appareil est réveillé même si rien ne s'affiche.
 - Les photos remplacées peuvent laisser d'anciens objets dans Storage.
-- La fonction Edge utilise `npm:web-push` sous Deno ; ce point doit être validé sur votre projet Supabase.
+- La fonction Edge utilise `npm:web-push` sous Deno (déployée et testée sur ce projet).
+- La résolution de conflit est manuelle, ligne par ligne : un conflit non traité bloque la synchronisation de cette ligne jusqu'au choix local/distant.
+- Les pièces jointes volumineuses sont compressées pour les images mais les PDF ne le sont pas.
 - Un projet Supabase gratuit peut être mis en pause après une longue inactivité.
 - Safari peut évincer IndexedDB ; une PWA installée et `navigator.storage.persist()` réduisent le risque sans l'éliminer.

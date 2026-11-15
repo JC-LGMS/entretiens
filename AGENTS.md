@@ -17,14 +17,16 @@ Application complète et configurée (Supabase, Cloudflare, sauvegarde). Le dét
 ## Architecture
 
 - Svelte 5 avec runes (`$state`, `$derived`, `$effect`) ; l'état global est dans `src/lib/state.svelte.ts`.
-- Routage par hash maison dans `src/lib/router.svelte.ts` : `#/` = planning (accueil), `#/entities`, `#/entity/<id>?action=<id>`, `#/profiles`, `#/profile/<id>`, `#/settings`.
-- Dexie est la source de vérité locale (`src/lib/db.ts`), Supabase est le backend.
-- `src/lib/sync.ts` pousse l'outbox puis tire les changements par curseur `updated_at`.
-- `src/sw.ts` gère le push et le silence par profil ; `src/lib/theme.ts` gère le thème par appareil.
+- Routage par hash maison dans `src/lib/router.svelte.ts` : `#/` = planning (accueil), `#/entities`, `#/entity/<id>?action=<id>`, `#/profiles`, `#/profile/<id>`, `#/settings`, `#/trash`.
+- Dexie est la source de vérité locale (`src/lib/db.ts`, schéma v2), Supabase est le backend.
+- `src/lib/sync.ts` détecte les conflits avant le pull, puis pousse l'outbox et tire les changements par curseur `updated_at`. Les conflits sont stockés dans `conflicts` et résolus depuis `SyncDialog`.
+- `src/sw.ts` gère le push et le silence par profil ; `src/lib/theme.ts` gère le thème par appareil ; `src/lib/pwa.ts` gère la mise à jour PWA (prompt + bouton).
 - Le thème est toujours appliqué explicitement (`data-theme` = `light` ou `dark`, `color-scheme: only light|dark`) ; le mode « système » résout la préférence et écoute les changements.
 - `src/lib/version.ts` expose la version (format 0.x) et le changelog ; `src/components/Icon.svelte` contient les icônes SVG de navigation.
-- Les actions ont deux modes : intervalle (`interval_value` / `interval_unit`) ou dates fixes annuelles (`annual_dates`, tableau de `MM-DD`). `next_due` reste la source de vérité pour le planning et le cron. Elles ont aussi une `description` libre.
-- `saveLocal` / `saveMute` passent les lignes par `toPlain` (clone JSON) avant Dexie : les proxys réactifs de Svelte ne sont pas clonables par IndexedDB.
+- Les actions ont deux modes : intervalle (`interval_value` / `interval_unit`) ou dates fixes annuelles (`annual_dates`, tableau de `MM-DD`). `next_due` reste la source de vérité pour le planning et le cron. Elles ont aussi une `description` libre, une assignation (`assigned_profile_id`), un délai de rappel (`notify_lead_days`), une relance des retards (`overdue_repeat_days`) et une `checklist`.
+- Les pièces jointes vivent dans `attachments` (métadonnées synchronisées) et `attachmentBlobs` (octets locaux) ; les photos d'entité restent dans le bucket `photos`, les pièces jointes dans le bucket `attachments`.
+- `src/lib/actions.ts` recalcule `next_due` après modification ou suppression d'une réalisation ; `src/lib/backup.ts` produit et restaure l'archive ZIP utilisateur (JSON + photos + documents).
+- `saveLocal` / `saveMute` / `saveActionMute` passent les lignes par `toPlain` (clone JSON) avant Dexie : les proxys réactifs de Svelte ne sont pas clonables par IndexedDB.
 - `EntityPhoto` pousse un état d'historique à l'ouverture d'une image : le bouton retour ferme la visionneuse avant de quitter l'entité.
 - Sauvegarde : `.github/workflows/backup.yml` (hebdomadaire), `scripts/backup-photos.mjs`, procédure `docs/backup-restore.md`. Secrets GitHub : `SUPABASE_DB_URL`, `SUPABASE_SERVICE_ROLE_KEY`, variables `SUPABASE_PROJECT_REF`, `AGE_PUBLIC_KEY`.
 - Le dump de sauvegarde utilise `pg_dump` (Docker `postgres:17`), pas `supabase db dump` seul : il doit contenir structure **et** données. Le workflow échoue si `public.sql` ne contient aucun `COPY`/`INSERT`.
@@ -40,12 +42,14 @@ Application complète et configurée (Supabase, Cloudflare, sauvegarde). Le dét
 - Ne jamais committer un dump, une photo de sauvegarde ou la clé privée `age`. La clé `service_role` utilisée par le script photos est un secret GitHub, jamais dans le dépôt. `SUPABASE_ACCESS_TOKEN` n'est plus utilisé par la sauvegarde.
 - Toute modification fonctionnelle de `src/` doit passer par `npm run version:bump -- "..."` (ou le hook Git) pour garder `package.json`, `package-lock.json` et `changelog.json` alignés. Le script reste dans la série 0.x ; l'affichage retire le patch (`.0`).
 - `updated_at` est posé par le trigger Postgres. La valeur envoyée par le client est écrasée.
-- `profile_mutes` a une clé composite `(profile_id, entity_id)` et pas d'`id` ; son `onConflict` est `profile_id,entity_id`.
-- L'ordre de push compte : profils → entités → actions → journaux → historique → silences.
+- `profile_mutes` a une clé composite `(profile_id, entity_id)` et pas d'`id` ; son `onConflict` est `profile_id,entity_id`. `action_mutes` suit le même modèle avec `(profile_id, action_id)`.
+- L'ordre de push compte : profils → entités → actions → silences d'action → journaux → historique → pièces jointes → silences d'entité.
+- Ne pas créer une pièce jointe avec un `put` direct : passer par `saveAttachment` / `deleteAttachment` (`src/lib/attachments.ts`) pour remplir `attachmentBlobs` et l'outbox.
+- Une écriture locale ne doit jamais écraser silencieusement une modification distante : `outbox.base_updated_at` sert à détecter le conflit, à conserver dans `conflicts` et à résoudre manuellement.
 - Le service worker lit le profil courant dans IndexedDB : `localStorage` est inaccessible dans un SW.
 - Les chemins de photos sont versionnés ; ne pas revenir à `<entity-id>.jpg`.
 - Les noms de profils sont uniques, sans tenir compte de la casse ni des espaces : passer par `createProfile` / `normalizeProfileName`, ne pas créer un profil avec un `saveLocal` direct.
-- Le cron tourne à 07:00 UTC et ne notifie que le jour J.
+- Le cron tourne à 07:00 UTC, envoie le rappel à J-`notify_lead_days` (0 = jour J), relance les retards tous les `overdue_repeat_days` jours et prévient 30 jours avant et le jour de la fin de garantie.
 - L'accès est un compte partagé, avec inscriptions Supabase désactivées. Les profils ne sont pas authentifiés.
 - `npm run dev` n'enregistre pas le service worker : ne pas en conclure que le push est cassé.
 

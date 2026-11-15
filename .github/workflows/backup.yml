@@ -53,7 +53,7 @@ jobs:
       - name: Copie des photos
         run: |
           SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co" \
-          PHOTOS_DEST=backup/photos \
+          PHOTOS_DEST=backup \
           node scripts/backup-photos.mjs
 
       - name: Archive et chiffrement

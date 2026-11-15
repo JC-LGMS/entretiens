@@ -18,11 +18,13 @@
   const initial = untrack(() => ({
     name: entity?.name ?? '',
     kind: entity?.kind ?? ('equipement' as Kind),
-    notes: entity?.notes ?? ''
+    notes: entity?.notes ?? '',
+    warranty: entity?.warranty_until ?? ''
   }))
   let name = $state(initial.name)
   let kind = $state<Kind>(initial.kind)
   let notes = $state(initial.notes)
+  let warranty = $state(initial.warranty)
   let file = $state<File | null>(null)
   let busy = $state(false)
   let error = $state('')
@@ -49,6 +51,8 @@
           name: name.trim(),
           notes: notes.trim(),
           photo_path: null,
+          warranty_until: warranty || null,
+          warranty_notified_on: null,
           archived: false,
           updated_at: now,
           deleted_at: null
@@ -67,12 +71,16 @@
         kind,
         name: name.trim(),
         notes: notes.trim(),
+        warranty_until: warranty || null,
+        warranty_notified_on:
+          entity.warranty_until !== (warranty || null) ? null : entity.warranty_notified_on,
         updated_at: now
       }
       const summary = joinSummary([
         describeChange('Nom', entity.name, updated.name),
         describeChange('Type', kindLabel(entity.kind), kindLabel(updated.kind)),
-        entity.notes !== updated.notes ? 'Notes modifiées' : null
+        entity.notes !== updated.notes ? 'Notes modifiées' : null,
+        describeChange('Garantie', entity.warranty_until ?? '', updated.warranty_until ?? '')
       ])
       await saveLocal('entities', updated)
       if (summary) await recordHistory(entity.id, null, app.profileId, 'entity_updated', summary)
@@ -151,6 +159,11 @@
     <label class="field">
       <span>Notes</span>
       <textarea bind:value={notes} placeholder="Modèle, emplacement, référence…"></textarea>
+    </label>
+
+    <label class="field">
+      <span>Fin de garantie</span>
+      <input type="date" bind:value={warranty} />
     </label>
 
     <label class="field">

@@ -18,6 +18,12 @@ if (vapidPublic && vapidPrivate) {
 
 const headers = { 'Content-Type': 'application/json' }
 
+function dayDiff(dateISO: string, todayISO: string): number {
+  const date = new Date(`${dateISO}T00:00:00Z`).getTime()
+  const today = new Date(`${todayISO}T00:00:00Z`).getTime()
+  return Math.round((date - today) / 86400000)
+}
+
 Deno.serve(async (request) => {
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'method_not_allowed' }), { status: 405, headers })
@@ -30,19 +36,14 @@ Deno.serve(async (request) => {
   }
 
   const today = new Date().toISOString().slice(0, 10)
-  const { data: due, error: dueError } = await admin
+  const { data: actions, error: actionsError } = await admin
     .from('actions')
-    .select('id, label, next_due, entity_id, entities(name)')
-    .eq('next_due', today)
+    .select('id, label, next_due, entity_id, notify_lead_days, overdue_repeat_days, last_notified_on, entities(name)')
     .eq('active', true)
     .is('deleted_at', null)
-    .or(`notified_for.is.null,notified_for.neq.${today}`)
 
-  if (dueError) {
-    return new Response(JSON.stringify({ error: dueError.message }), { status: 500, headers })
-  }
-  if (!due || due.length === 0) {
-    return new Response(JSON.stringify({ sent: 0, actions: 0 }), { headers })
+  if (actionsError) {
+    return new Response(JSON.stringify({ error: actionsError.message }), { status: 500, headers })
   }
 
   const { data: subscriptions, error: subsError } = await admin
@@ -52,26 +53,25 @@ Deno.serve(async (request) => {
   if (subsError) {
     return new Response(JSON.stringify({ error: subsError.message }), { status: 500, headers })
   }
-  if (!subscriptions || subscriptions.length === 0) {
-    return new Response(JSON.stringify({ sent: 0, actions: due.length }), { headers })
-  }
 
   const stale = new Set<string>()
   let sent = 0
+  let actionCount = 0
 
-  for (const action of due) {
-    const relation = action.entities as unknown
-    const entityName = Array.isArray(relation)
-      ? (relation[0] as { name?: string } | undefined)?.name
-      : (relation as { name?: string } | null)?.name
+  async function send(
+    entityId: string,
+    title: string,
+    body: string,
+    actionId?: string
+  ): Promise<boolean> {
+    if (!subscriptions || subscriptions.length === 0) return false
     const payload = JSON.stringify({
-      title: 'Entretien à prévoir',
-      body: `${entityName ?? 'Entité'} · ${action.label}`,
-      entityId: action.entity_id,
-      actionId: action.id,
+      title,
+      body,
+      entityId,
+      actionId: actionId ?? null,
       url: '/#/planning'
     })
-
     let delivered = 0
     for (const subscription of subscriptions) {
       try {
@@ -90,9 +90,57 @@ Deno.serve(async (request) => {
         if (status === 404 || status === 410) stale.add(subscription.endpoint)
       }
     }
+    return delivered > 0
+  }
 
-    if (delivered > 0) {
-      await admin.from('actions').update({ notified_for: today }).eq('id', action.id)
+  for (const action of actions ?? []) {
+    const diff = dayDiff(action.next_due, today)
+    const lead = action.notify_lead_days ?? 0
+    const repeat = action.overdue_repeat_days ?? 0
+    const leadDay = diff === lead
+    const overdueDay = diff < 0 && repeat > 0 && -diff % repeat === 0
+    if (!leadDay && !overdueDay) continue
+    if (action.last_notified_on === today) continue
+
+    const relation = action.entities as unknown
+    const entityName = Array.isArray(relation)
+      ? (relation[0] as { name?: string } | undefined)?.name
+      : (relation as { name?: string } | null)?.name
+    const delivered = await send(
+      action.entity_id,
+      'Entretien à prévoir',
+      `${entityName ?? 'Entité'} · ${action.label}`,
+      action.id
+    )
+    if (delivered) {
+      await admin.from('actions').update({ last_notified_on: today }).eq('id', action.id)
+      actionCount += 1
+    }
+  }
+
+  const { data: entities, error: entitiesError } = await admin
+    .from('entities')
+    .select('id, name, warranty_until, warranty_notified_on')
+    .not('warranty_until', 'is', null)
+    .is('deleted_at', null)
+
+  if (entitiesError) {
+    return new Response(JSON.stringify({ error: entitiesError.message }), { status: 500, headers })
+  }
+
+  let warrantyCount = 0
+  for (const entity of entities ?? []) {
+    const diff = dayDiff(entity.warranty_until, today)
+    if (diff !== 30 && diff !== 0) continue
+    if (entity.warranty_notified_on === today) continue
+    const delivered = await send(
+      entity.id,
+      'Garantie à vérifier',
+      `${entity.name} · garantie le ${entity.warranty_until}`
+    )
+    if (delivered) {
+      await admin.from('entities').update({ warranty_notified_on: today }).eq('id', entity.id)
+      warrantyCount += 1
     }
   }
 
@@ -100,5 +148,8 @@ Deno.serve(async (request) => {
     await admin.from('push_subscriptions').delete().in('endpoint', [...stale])
   }
 
-  return new Response(JSON.stringify({ sent, actions: due.length }), { headers })
+  return new Response(
+    JSON.stringify({ sent, actions: actionCount, warranties: warrantyCount }),
+    { headers }
+  )
 })

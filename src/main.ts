@@ -1,10 +1,10 @@
 import { mount } from 'svelte'
-import { registerSW } from 'virtual:pwa-register'
 import './app.css'
 import App from './App.svelte'
+import { registerPwa } from './lib/pwa'
 import { initTheme } from './lib/theme'
 
-registerSW({ immediate: true })
+registerPwa()
 initTheme()
 
 const app = mount(App, { target: document.getElementById('app')! })

@@ -26,6 +26,8 @@ create table if not exists public.entities (
   name text not null,
   notes text not null default '',
   photo_path text,
+  warranty_until date,
+  warranty_notified_on date,
   archived boolean not null default false,
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -36,6 +38,7 @@ create table if not exists public.actions (
   entity_id uuid not null references public.entities(id),
   label text not null,
   description text not null default '',
+  assigned_profile_id uuid references public.profiles(id),
   interval_value integer not null check (interval_value > 0),
   interval_unit text not null check (interval_unit in ('day', 'week', 'month', 'year')),
   last_done date,
@@ -43,6 +46,10 @@ create table if not exists public.actions (
   active boolean not null default true,
   archived boolean not null default false,
   annual_dates jsonb not null default '[]'::jsonb,
+  notify_lead_days integer not null default 0,
+  overdue_repeat_days integer not null default 0,
+  last_notified_on date,
+  checklist jsonb not null default '[]'::jsonb,
   notified_for date,
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -53,6 +60,8 @@ create table if not exists public.logs (
   action_id uuid not null references public.actions(id),
   done_on date not null,
   comment text not null default '',
+  cost numeric(10, 2),
+  checklist_done jsonb not null default '[]'::jsonb,
   created_by uuid references public.profiles(id),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -84,7 +93,29 @@ create table if not exists public.push_subscriptions (
   endpoint text not null unique,
   p256dh text not null,
   auth text not null,
+  label text not null default '',
+  last_seen timestamptz not null default now(),
   created_at timestamptz not null default now()
+);
+
+create table if not exists public.action_mutes (
+  profile_id uuid not null references public.profiles(id),
+  action_id uuid not null references public.actions(id),
+  muted boolean not null default true,
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz,
+  primary key (profile_id, action_id)
+);
+
+create table if not exists public.attachments (
+  id uuid primary key,
+  owner_type text not null check (owner_type in ('entity', 'action', 'log')),
+  owner_id uuid not null,
+  title text not null default '',
+  storage_path text not null,
+  mime_type text not null default '',
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
 );
 
 drop trigger if exists touch_profiles on public.profiles;
@@ -111,6 +142,14 @@ drop trigger if exists touch_profile_mutes on public.profile_mutes;
 create trigger touch_profile_mutes before insert or update on public.profile_mutes
 for each row execute function public.set_updated_at();
 
+drop trigger if exists touch_action_mutes on public.action_mutes;
+create trigger touch_action_mutes before insert or update on public.action_mutes
+for each row execute function public.set_updated_at();
+
+drop trigger if exists touch_attachments on public.attachments;
+create trigger touch_attachments before insert or update on public.attachments
+for each row execute function public.set_updated_at();
+
 create index if not exists actions_due_idx
   on public.actions (next_due)
   where deleted_at is null and active;
@@ -123,6 +162,10 @@ create index if not exists history_updated_idx on public.history (updated_at);
 create index if not exists entities_updated_idx on public.entities (updated_at);
 create index if not exists profiles_updated_idx on public.profiles (updated_at);
 create index if not exists profile_mutes_updated_idx on public.profile_mutes (updated_at);
+create index if not exists action_mutes_updated_idx on public.action_mutes (updated_at);
+create index if not exists actions_assigned_idx on public.actions (assigned_profile_id);
+create index if not exists attachments_owner_idx on public.attachments (owner_type, owner_id);
+create index if not exists attachments_updated_idx on public.attachments (updated_at);
 
 alter table public.profiles enable row level security;
 alter table public.entities enable row level security;
@@ -130,6 +173,8 @@ alter table public.actions enable row level security;
 alter table public.logs enable row level security;
 alter table public.history enable row level security;
 alter table public.profile_mutes enable row level security;
+alter table public.action_mutes enable row level security;
+alter table public.attachments enable row level security;
 alter table public.push_subscriptions enable row level security;
 
 drop policy if exists authenticated_all on public.profiles;
@@ -156,6 +201,14 @@ drop policy if exists authenticated_all on public.profile_mutes;
 create policy authenticated_all on public.profile_mutes
   for all to authenticated using (true) with check (true);
 
+drop policy if exists authenticated_all on public.action_mutes;
+create policy authenticated_all on public.action_mutes
+  for all to authenticated using (true) with check (true);
+
+drop policy if exists authenticated_all on public.attachments;
+create policy authenticated_all on public.attachments
+  for all to authenticated using (true) with check (true);
+
 drop policy if exists authenticated_all on public.push_subscriptions;
 create policy authenticated_all on public.push_subscriptions
   for all to authenticated using (true) with check (true);
@@ -164,8 +217,18 @@ insert into storage.buckets (id, name, public)
 values ('photos', 'photos', false)
 on conflict (id) do nothing;
 
+insert into storage.buckets (id, name, public)
+values ('attachments', 'attachments', false)
+on conflict (id) do nothing;
+
 drop policy if exists photos_authenticated on storage.objects;
 create policy photos_authenticated on storage.objects
   for all to authenticated
   using (bucket_id = 'photos')
   with check (bucket_id = 'photos');
+
+drop policy if exists attachments_authenticated on storage.objects;
+create policy attachments_authenticated on storage.objects
+  for all to authenticated
+  using (bucket_id = 'attachments')
+  with check (bucket_id = 'attachments');

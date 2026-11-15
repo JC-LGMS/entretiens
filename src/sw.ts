@@ -12,7 +12,13 @@ precacheAndRoute(self.__WB_MANIFEST)
 registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')))
 
 self.addEventListener('install', () => {
-  void self.skipWaiting()
+  // Le rechargement est laissé au bouton « Mettre à jour ».
+})
+
+self.addEventListener('message', (event) => {
+  if ((event.data as { type?: string } | null)?.type === 'SKIP_WAITING') {
+    void self.skipWaiting()
+  }
 })
 
 self.addEventListener('activate', (event) => {
@@ -23,6 +29,7 @@ interface PushPayload {
   title?: string
   body?: string
   entityId?: string
+  actionId?: string | null
   url?: string
 }
 
@@ -44,7 +51,14 @@ self.addEventListener('push', (event) => {
           .where('[profile_id+entity_id]')
           .equals([profileId, data.entityId])
           .first()
-        muted = Boolean(mute?.muted)
+        muted = Boolean(mute?.muted && !mute.deleted_at)
+      }
+      if (profileId && data.actionId && !muted) {
+        const mute = await db.actionMutes
+          .where('[profile_id+action_id]')
+          .equals([profileId, data.actionId])
+          .first()
+        muted = Boolean(mute?.muted && !mute.deleted_at)
       }
       if (!shouldShowNotification(profileId, muted)) return
 

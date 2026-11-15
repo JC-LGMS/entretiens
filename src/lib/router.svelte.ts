@@ -5,6 +5,7 @@ export type Route =
   | { name: 'entity'; id: string; actionId?: string }
   | { name: 'profiles' }
   | { name: 'profile'; id: string }
+  | { name: 'trash' }
 
 function parse(): Route {
   const hash = location.hash.replace(/^#\/?/, '')
@@ -16,6 +17,7 @@ function parse(): Route {
   }
   if (hash.startsWith('profile/')) return { name: 'profile', id: hash.slice('profile/'.length) }
   if (hash === 'profiles') return { name: 'profiles' }
+  if (hash === 'trash') return { name: 'trash' }
   if (hash === 'entities') return { name: 'entities' }
   if (hash === 'settings') return { name: 'settings' }
   return { name: 'planning' }

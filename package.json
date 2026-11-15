@@ -1,7 +1,7 @@
 {
   "name": "entretiens",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,7 +15,8 @@
   "dependencies": {
     "@supabase/supabase-js": "2.105.0",
     "date-fns": "^4.4.0",
-    "dexie": "^4.4.7"
+    "dexie": "^4.4.7",
+    "fflate": "^0.8.3"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.1.1",

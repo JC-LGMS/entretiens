@@ -1,24 +1,44 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { signOut } from '../lib/auth'
-  import { disablePush, enablePush, getPushStatus, isStandalone, pushSupported, type PushStatus } from '../lib/push'
+  import { exportBackup, importBackup } from '../lib/backup'
+  import {
+    currentPushEndpoint,
+    disablePush,
+    enablePush,
+    getPushStatus,
+    isStandalone,
+    listPushSubscriptions,
+    pushSupported,
+    revokePushSubscription,
+    type PushStatus
+  } from '../lib/push'
   import { setCurrentProfile } from '../lib/profiles'
   import { navigate } from '../lib/router.svelte'
   import { app } from '../lib/state.svelte'
   import { syncNow } from '../lib/sync'
   import { setTheme, themeState, type Theme } from '../lib/theme'
   import { APP_VERSION } from '../lib/version'
+  import type { PushSubscriptionRow } from '../lib/types'
   import ChangelogDialog from '../components/ChangelogDialog.svelte'
+  import SyncDialog from '../components/SyncDialog.svelte'
+
   let push = $state<PushStatus | 'loading'>('loading')
   let pushBusy = $state(false)
   let pushError = $state('')
   let syncBusy = $state(false)
   let showChangelog = $state(false)
+  let showSync = $state(false)
+  let devices = $state<PushSubscriptionRow[]>([])
+  let currentEndpoint = $state<string | null>(null)
+  let dataBusy = $state(false)
+  let dataError = $state('')
 
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
 
   onMount(() => {
     void refreshPush()
+    void refreshDevices()
   })
 
   async function refreshPush() {
@@ -30,6 +50,15 @@
     }
   }
 
+  async function refreshDevices() {
+    try {
+      currentEndpoint = await currentPushEndpoint()
+      devices = await listPushSubscriptions()
+    } catch (err) {
+      pushError = err instanceof Error ? err.message : String(err)
+    }
+  }
+
   async function togglePush() {
     pushBusy = true
     pushError = ''
@@ -37,6 +66,23 @@
       if (push === 'subscribed') await disablePush()
       else await enablePush()
       await refreshPush()
+      await refreshDevices()
+    } catch (err) {
+      pushError = err instanceof Error ? err.message : String(err)
+    } finally {
+      pushBusy = false
+    }
+  }
+
+  async function revokeDevice(endpoint: string) {
+    if (!confirm('Révoquer cet appareil ? Il ne recevra plus de notifications.')) return
+    pushBusy = true
+    pushError = ''
+    try {
+      if (endpoint === currentEndpoint) await disablePush()
+      else await revokePushSubscription(endpoint)
+      await refreshPush()
+      await refreshDevices()
     } catch (err) {
       pushError = err instanceof Error ? err.message : String(err)
     } finally {
@@ -48,6 +94,48 @@
     syncBusy = true
     await syncNow()
     syncBusy = false
+  }
+
+  async function doExport() {
+    dataBusy = true
+    dataError = ''
+    try {
+      await exportBackup()
+    } catch (err) {
+      dataError = err instanceof Error ? err.message : String(err)
+    } finally {
+      dataBusy = false
+    }
+  }
+
+  async function doImport(event: Event) {
+    const input = event.currentTarget as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) return
+    if (!confirm('Importer cette archive ? Les éléments existants seront fusionnés par identifiant.')) {
+      input.value = ''
+      return
+    }
+    dataBusy = true
+    dataError = ''
+    try {
+      await importBackup(file)
+      await syncNow()
+      input.value = ''
+    } catch (err) {
+      dataError = err instanceof Error ? err.message : String(err)
+    } finally {
+      dataBusy = false
+    }
+  }
+
+  function lastSeenLabel(value: string): string {
+    return new Date(value).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   function chooseTheme(next: Theme) {
@@ -137,6 +225,26 @@
   {#if pushError}<p class="error" style="margin-top:10px">{pushError}</p>{/if}
 </div>
 
+{#if devices.length}
+  <div class="section-title"><h2>Appareils abonnés</h2></div>
+  <div class="card card-pad">
+    {#each devices as device (device.endpoint)}
+      <div class="settings-row">
+        <div class="grow">
+          <strong>{device.label || 'Appareil'}</strong>
+          <p class="muted tiny">
+            {lastSeenLabel(device.last_seen)}
+            {#if device.endpoint === currentEndpoint} · cet appareil{/if}
+          </p>
+        </div>
+        <button class="btn btn-sm btn-danger" onclick={() => revokeDevice(device.endpoint)} disabled={pushBusy}>
+          Révoquer
+        </button>
+      </div>
+    {/each}
+  </div>
+{/if}
+
 <div class="section-title"><h2>Synchronisation</h2></div>
 <div class="card card-pad">
   <div class="settings-row">
@@ -153,6 +261,44 @@
   <p class="muted tiny" style="margin-top:10px">
     Les modifications sont enregistrées localement puis envoyées dès que le réseau revient.
   </p>
+</div>
+
+<div class="section-title"><h2>Données</h2></div>
+<div class="card card-pad">
+  <div class="settings-row">
+    <div class="grow">
+      <strong>Exporter</strong>
+      <p class="muted tiny">JSON + photos + documents dans une archive ZIP.</p>
+    </div>
+    <button class="btn btn-sm" onclick={doExport} disabled={dataBusy}>
+      {dataBusy ? '…' : 'Exporter'}
+    </button>
+  </div>
+  <div class="settings-row">
+    <div class="grow">
+      <strong>Importer</strong>
+      <p class="muted tiny">Fusion par identifiant, photos incluses.</p>
+    </div>
+    <label class="btn btn-sm">
+      Importer
+      <input type="file" accept=".zip,application/zip" style="display:none" onchange={doImport} />
+    </label>
+  </div>
+  <div class="settings-row">
+    <div class="grow">
+      <strong>Corbeille</strong>
+      <p class="muted tiny">Restaurer une entité, une action ou une réalisation.</p>
+    </div>
+    <button class="btn btn-sm" onclick={() => navigate('/trash')}>Ouvrir</button>
+  </div>
+  <div class="settings-row">
+    <div class="grow">
+      <strong>Conflits de synchronisation</strong>
+      <p class="muted tiny">{app.conflicts} conflit{app.conflicts > 1 ? 's' : ''} en attente.</p>
+    </div>
+    <button class="btn btn-sm" onclick={() => (showSync = true)}>Détails</button>
+  </div>
+  {#if dataError}<p class="error" style="margin-top:10px">{dataError}</p>{/if}
 </div>
 
 <div class="section-title"><h2>Compte</h2></div>
@@ -179,4 +325,8 @@
 
 {#if showChangelog}
   <ChangelogDialog onclose={() => (showChangelog = false)} />
+{/if}
+
+{#if showSync}
+  <SyncDialog onclose={() => (showSync = false)} />
 {/if}

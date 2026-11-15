@@ -7,9 +7,11 @@
   import { urgencyOf, URGENCY_LABEL, type Urgency } from '../lib/urgency'
   import type { ActionRow, EntityRow } from '../lib/types'
   import ActionForm from '../components/ActionForm.svelte'
+  import DoneDialog from '../components/DoneDialog.svelte'
   import EntityForm from '../components/EntityForm.svelte'
   import EntityPhoto from '../components/EntityPhoto.svelte'
   import Modal from '../components/Modal.svelte'
+  import PlanningCalendar from '../components/PlanningCalendar.svelte'
   import UrgencyBadge from '../components/UrgencyBadge.svelte'
 
   interface Item {
@@ -21,6 +23,9 @@
   let items = $state<Item[]>([])
   let entities = $state<EntityRow[]>([])
   let query = $state('')
+  let onlyMine = $state(false)
+  let view = $state<'list' | 'week' | '2weeks' | 'month'>('list')
+  let doneItem = $state<Item | null>(null)
   let showEntityForm = $state(false)
   let showEntityPicker = $state(false)
   let actionEntityId = $state<string | null>(null)
@@ -40,8 +45,13 @@
       )
       const muted = new Set(
         (await db.profileMutes.toArray())
-          .filter((m) => m.muted && m.profile_id === profileId)
+          .filter((m) => m.muted && !m.deleted_at && m.profile_id === profileId)
           .map((m) => m.entity_id)
+      )
+      const actionMuted = new Set(
+        (await db.actionMutes.toArray())
+          .filter((m) => m.muted && !m.deleted_at && m.profile_id === profileId)
+          .map((m) => m.action_id)
       )
       const visibleEntities = [...entityMap.values()].sort((a, b) =>
         a.name.localeCompare(b.name, 'fr')
@@ -53,7 +63,7 @@
           .map((a) => ({
             action: a,
             entity: entityMap.get(a.entity_id)!,
-            muted: muted.has(a.entity_id)
+            muted: muted.has(a.entity_id) || actionMuted.has(a.id)
           }))
       }
     }).subscribe((value) => {
@@ -64,9 +74,12 @@
   })
 
   const filteredItems = $derived.by(() => {
+    const mine = onlyMine
+      ? items.filter((item) => item.action.assigned_profile_id === app.profileId)
+      : items
     const needle = query.trim().toLowerCase()
-    if (!needle) return items
-    return items.filter(
+    if (!needle) return mine
+    return mine.filter(
       (item) =>
         item.action.label.toLowerCase().includes(needle) ||
         item.entity.name.toLowerCase().includes(needle) ||
@@ -122,7 +135,7 @@
   <button class="btn btn-sm btn-primary desktop-add" onclick={startAction}>＋ Action</button>
 </div>
 
-<div class="search" style="margin-bottom:12px">
+<div class="search" style="margin-bottom:10px">
   <span aria-hidden="true">🔎</span>
   <input
     type="text"
@@ -132,17 +145,27 @@
   />
 </div>
 
+<div class="chips" style="margin-bottom:12px">
+  <button class="chip" class:active={onlyMine} onclick={() => (onlyMine = !onlyMine)}>
+    👤 Mes actions
+  </button>
+  <button class="chip" class:active={view === 'list'} onclick={() => (view = 'list')}>Liste</button>
+  <button class="chip" class:active={view === 'week'} onclick={() => (view = 'week')}>7 jours</button>
+  <button class="chip" class:active={view === '2weeks'} onclick={() => (view = '2weeks')}>14 jours</button>
+  <button class="chip" class:active={view === 'month'} onclick={() => (view = 'month')}>Mois</button>
+</div>
+
 <button class="fab mobile-only" aria-label="Ajouter une action" onclick={startAction}>＋</button>
 
-{#if groups.length === 0}
+{#if filteredItems.length === 0}
   <div class="card empty">
     <span class="big" aria-hidden="true">📅</span>
-    <p>{query ? 'Aucune action trouvée.' : 'Aucune action planifiée.'}</p>
-    {#if !query}
+    <p>{query || onlyMine ? 'Aucune action trouvée.' : 'Aucune action planifiée.'}</p>
+    {#if !query && !onlyMine}
       <p class="tiny">Ajoutez un équipement puis une action pour commencer.</p>
     {/if}
   </div>
-{:else}
+{:else if view === 'list'}
   {#each groups as group (group.urgency)}
     <div class="section-title">
       <h2>{group.label}</h2>
@@ -150,28 +173,38 @@
     </div>
     <div class="card">
       {#each group.items as item (item.action.id)}
-        <a
-          class={`entity-row planning-row ${urgencyOf(item.action.next_due)}`}
-          href={`#/entity/${item.entity.id}?action=${item.action.id}`}
-        >
-          <EntityPhoto
-            entityId={item.entity.id}
-            photoPath={item.entity.photo_path}
-            kind={item.entity.kind}
-            alt={item.entity.name}
-          />
-          <div class="entity-main">
-            <strong>{item.action.label}</strong>
-            <small>{item.entity.name}{item.muted ? ' · 🔕 notifications coupées' : ''}</small>
-          </div>
-          <div class="due-right">
-            <UrgencyBadge nextDue={item.action.next_due} />
-            <span class="tiny muted">{formatShort(item.action.next_due)}</span>
-          </div>
-        </a>
+        <div class={`entity-row planning-row ${urgencyOf(item.action.next_due)}`}>
+          <a
+            class="row-link"
+            href={`#/entity/${item.entity.id}?action=${item.action.id}`}
+          >
+            <EntityPhoto
+              entityId={item.entity.id}
+              photoPath={item.entity.photo_path}
+              kind={item.entity.kind}
+              alt={item.entity.name}
+            />
+            <div class="entity-main">
+              <strong>{item.action.label}</strong>
+              <small>{item.entity.name}{item.muted ? ' · 🔕 notifications coupées' : ''}</small>
+            </div>
+            <div class="due-right">
+              <UrgencyBadge nextDue={item.action.next_due} />
+              <span class="tiny muted">{formatShort(item.action.next_due)}</span>
+            </div>
+          </a>
+          <button
+            class="btn btn-sm btn-soft"
+            aria-label={`Marquer ${item.action.label} fait`}
+            title="C'est fait"
+            onclick={() => (doneItem = item)}
+          >✓</button>
+        </div>
       {/each}
     </div>
   {/each}
+{:else}
+  <PlanningCalendar items={filteredItems} view={view} />
 {/if}
 
 {#if showEntityForm}
@@ -227,5 +260,13 @@
       actionEntityId = null
       actionEntityName = ''
     }}
+  />
+{/if}
+
+{#if doneItem}
+  <DoneDialog
+    action={doneItem.action}
+    entityName={doneItem.entity.name}
+    onclose={() => (doneItem = null)}
   />
 {/if}

@@ -27,6 +27,8 @@ export interface EntityRow {
   name: string
   notes: string
   photo_path: string | null
+  warranty_until: string | null
+  warranty_notified_on: string | null
   archived: boolean
   updated_at: string
   deleted_at: string | null
@@ -37,6 +39,7 @@ export interface ActionRow {
   entity_id: string
   label: string
   description: string
+  assigned_profile_id: string | null
   interval_value: number
   interval_unit: IntervalUnit
   last_done: string | null
@@ -44,6 +47,10 @@ export interface ActionRow {
   active: boolean
   archived: boolean
   annual_dates: string[]
+  notify_lead_days: number
+  overdue_repeat_days: number
+  last_notified_on: string | null
+  checklist: string[]
   notified_for: string | null
   updated_at: string
   deleted_at: string | null
@@ -54,6 +61,8 @@ export interface LogRow {
   action_id: string
   done_on: string
   comment: string
+  cost: number | null
+  checklist_done: string[]
   created_by: string | null
   updated_at: string
   deleted_at: string | null
@@ -94,11 +103,50 @@ export interface ProfileMuteRow {
   deleted_at: string | null
 }
 
+export interface ActionMuteRow {
+  profile_id: string
+  action_id: string
+  muted: boolean
+  updated_at: string
+  deleted_at: string | null
+}
+
+export type AttachmentOwner = 'entity' | 'action' | 'log'
+
+export interface AttachmentRow {
+  id: string
+  owner_type: AttachmentOwner
+  owner_id: string
+  title: string
+  storage_path: string
+  mime_type: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+export interface AttachmentBlobRow {
+  id: string
+  blob: Blob
+  uploaded: 0 | 1
+  updated_at: string
+}
+
+export interface ConflictRow {
+  id: string
+  table: SyncTable
+  row_id: string
+  local_payload: Record<string, unknown>
+  remote_payload: Record<string, unknown>
+  created_at: string
+}
+
 export interface PushSubscriptionRow {
   id: string
   endpoint: string
   p256dh: string
   auth: string
+  label: string
+  last_seen: string
   created_at: string
 }
 
@@ -114,12 +162,15 @@ export type SyncTable =
   | 'logs'
   | 'history'
   | 'profile_mutes'
+  | 'action_mutes'
+  | 'attachments'
 
 export interface OutboxRow {
   seq?: number
   table: SyncTable
   row_id: string
   payload: Record<string, unknown>
+  base_updated_at: string | null
   created_at: string
 }
 

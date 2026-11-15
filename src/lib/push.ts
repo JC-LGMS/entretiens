@@ -1,4 +1,5 @@
 import { supabase, vapidPublicKey } from './supabase'
+import type { PushSubscriptionRow } from './types'
 
 export type PushStatus = 'unsupported' | 'denied' | 'subscribed' | 'unsubscribed'
 
@@ -73,10 +74,56 @@ async function saveSubscription(subscription: PushSubscription): Promise<void> {
     throw new Error('Abonnement push incomplet')
   }
   const { error } = await supabase.from('push_subscriptions').upsert(
-    { endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth },
+    {
+      endpoint: json.endpoint,
+      p256dh: json.keys.p256dh,
+      auth: json.keys.auth,
+      label: deviceLabel(),
+      last_seen: new Date().toISOString()
+    },
     { onConflict: 'endpoint' }
   )
   if (error) throw new Error(`Abonnement push : ${error.message}`)
+}
+
+export function deviceLabel(): string {
+  const ua = navigator.userAgent
+  const platform =
+    (navigator as any).userAgentData?.platform ?? navigator.platform ?? 'Appareil'
+  const browser = /Edg\//.test(ua)
+    ? 'Edge'
+    : /Firefox\//.test(ua)
+      ? 'Firefox'
+      : /Chrome\//.test(ua)
+        ? 'Chrome'
+        : /Safari\//.test(ua)
+          ? 'Safari'
+          : 'Navigateur'
+  return `${platform} · ${browser}`
+}
+
+export async function listPushSubscriptions(): Promise<PushSubscriptionRow[]> {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('push_subscriptions')
+    .select('*')
+    .order('last_seen', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as PushSubscriptionRow[]
+}
+
+export async function currentPushEndpoint(): Promise<string | null> {
+  if (!pushSupported()) return null
+  const registration = await activeRegistration()
+  if (!registration) return null
+  const subscription = await registration.pushManager.getSubscription()
+  return subscription?.endpoint ?? null
+}
+
+export async function revokePushSubscription(endpoint: string): Promise<void> {
+  if (!supabase) return
+  const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+  if (error) throw new Error(error.message)
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {

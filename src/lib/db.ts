@@ -1,6 +1,10 @@
 import Dexie, { type Table } from 'dexie'
 import type {
+  ActionMuteRow,
   ActionRow,
+  AttachmentBlobRow,
+  AttachmentRow,
+  ConflictRow,
   EntityRow,
   HistoryRow,
   LogRow,
@@ -20,7 +24,11 @@ class AppDB extends Dexie {
   logs!: Table<LogRow, string>
   history!: Table<HistoryRow, string>
   profileMutes!: Table<ProfileMuteRow, [string, string]>
+  actionMutes!: Table<ActionMuteRow, [string, string]>
+  attachments!: Table<AttachmentRow, string>
+  attachmentBlobs!: Table<AttachmentBlobRow, string>
   photos!: Table<PhotoRow, string>
+  conflicts!: Table<ConflictRow, string>
   outbox!: Table<OutboxRow, number>
 
   constructor() {
@@ -36,6 +44,12 @@ class AppDB extends Dexie {
       photos: 'entityId, uploaded',
       outbox: '++seq, &[table+row_id], table'
     })
+    this.version(2).stores({
+      actionMutes: '[profile_id+action_id], profile_id, action_id, updated_at',
+      attachments: 'id, owner_type, owner_id, updated_at',
+      attachmentBlobs: 'id, uploaded',
+      conflicts: 'id, &[table+row_id], created_at'
+    })
   }
 }
 
@@ -47,7 +61,9 @@ const dexieNames: Record<SyncTable, keyof AppDB> = {
   actions: 'actions',
   logs: 'logs',
   history: 'history',
-  profile_mutes: 'profileMutes'
+  profile_mutes: 'profileMutes',
+  action_mutes: 'actionMutes',
+  attachments: 'attachments'
 }
 
 export const CONFLICT_TARGET: Record<SyncTable, string> = {
@@ -56,7 +72,9 @@ export const CONFLICT_TARGET: Record<SyncTable, string> = {
   actions: 'id',
   logs: 'id',
   history: 'id',
-  profile_mutes: 'profile_id,entity_id'
+  profile_mutes: 'profile_id,entity_id',
+  action_mutes: 'profile_id,action_id',
+  attachments: 'id'
 }
 
 export function tableFor(table: SyncTable): Table<any, any> {
@@ -71,13 +89,25 @@ function toPlain<T>(value: T): T {
 export async function queueOutbox(
   table: SyncTable,
   rowId: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  baseUpdatedAt: string | null
 ): Promise<void> {
   const existing = await db.outbox.where('[table+row_id]').equals([table, rowId]).first()
   if (existing?.seq !== undefined) {
-    await db.outbox.put({ ...existing, payload, created_at: new Date().toISOString() })
+    await db.outbox.put({
+      ...existing,
+      payload,
+      base_updated_at: existing.base_updated_at ?? baseUpdatedAt,
+      created_at: new Date().toISOString()
+    })
   } else {
-    await db.outbox.add({ table, row_id: rowId, payload, created_at: new Date().toISOString() })
+    await db.outbox.add({
+      table,
+      row_id: rowId,
+      payload,
+      base_updated_at: baseUpdatedAt,
+      created_at: new Date().toISOString()
+    })
   }
 }
 
@@ -87,21 +117,56 @@ function notifyLocalChange(): void {
 
 export async function saveLocal<T extends { id: string }>(table: SyncTable, row: T): Promise<void> {
   const dexieTable = tableFor(table)
+  const existing = await dexieTable.get(row.id)
+  const pending = await db.outbox.where('[table+row_id]').equals([table, row.id]).first()
+  const base = pending?.base_updated_at ?? existing?.updated_at ?? null
   const plain = toPlain(row)
   await db.transaction('rw', dexieTable, db.outbox, async () => {
     await dexieTable.put(plain)
-    await queueOutbox(table, plain.id, plain as unknown as Record<string, unknown>)
+    await queueOutbox(table, plain.id, plain as unknown as Record<string, unknown>, base)
+  })
+  notifyLocalChange()
+}
+
+async function saveComposite<T>(
+  table: SyncTable,
+  dexieTable: Table<T, [string, string]>,
+  row: T,
+  rowId: string,
+  key: [string, string]
+): Promise<void> {
+  const existing = await dexieTable.get(key)
+  const pending = await db.outbox.where('[table+row_id]').equals([table, rowId]).first()
+  const base =
+    pending?.base_updated_at ??
+    (existing as unknown as { updated_at?: string } | undefined)?.updated_at ??
+    null
+  const plain = toPlain(row)
+  await db.transaction('rw', dexieTable, db.outbox, async () => {
+    await dexieTable.put(plain)
+    await queueOutbox(table, rowId, plain as unknown as Record<string, unknown>, base)
   })
   notifyLocalChange()
 }
 
 export async function saveMute(row: ProfileMuteRow): Promise<void> {
-  const plain = toPlain(row)
-  await db.transaction('rw', db.profileMutes, db.outbox, async () => {
-    await db.profileMutes.put(plain)
-    await queueOutbox('profile_mutes', `${plain.profile_id}:${plain.entity_id}`, plain as unknown as Record<string, unknown>)
-  })
-  notifyLocalChange()
+  await saveComposite(
+    'profile_mutes',
+    db.profileMutes,
+    row,
+    `${row.profile_id}:${row.entity_id}`,
+    [row.profile_id, row.entity_id]
+  )
+}
+
+export async function saveActionMute(row: ActionMuteRow): Promise<void> {
+  await saveComposite(
+    'action_mutes',
+    db.actionMutes,
+    row,
+    `${row.profile_id}:${row.action_id}`,
+    [row.profile_id, row.action_id]
+  )
 }
 
 export async function softDelete(table: SyncTable, id: string): Promise<void> {

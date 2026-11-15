@@ -8,5 +8,6 @@ export const app = $state({
   sync: 'idle' as 'idle' | 'syncing' | 'error' | 'offline',
   syncError: '',
   lastSync: null as string | null,
+  conflicts: 0,
   ready: false
 })

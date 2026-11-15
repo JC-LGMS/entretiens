@@ -1,7 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { liveQuery } from 'dexie'
+  import { db } from './lib/db'
+  import { todayISO } from './lib/dates'
   import { initAuth } from './lib/auth'
   import { loadCurrentProfile } from './lib/profiles'
+  import { applyPwaUpdate, needRefresh } from './lib/pwa'
   import { syncExistingSubscription } from './lib/push'
   import { navigate, route } from './lib/router.svelte'
   import { app } from './lib/state.svelte'
@@ -9,6 +13,7 @@
   import { startSync, syncNow } from './lib/sync'
   import { themeState, toggleTheme } from './lib/theme'
   import Icon from './components/Icon.svelte'
+  import SyncDialog from './components/SyncDialog.svelte'
   import ConfigMissing from './views/ConfigMissing.svelte'
   import Entities from './views/Entities.svelte'
   import EntityDetail from './views/EntityDetail.svelte'
@@ -18,8 +23,10 @@
   import ProfilePicker from './views/ProfilePicker.svelte'
   import Profiles from './views/Profiles.svelte'
   import Settings from './views/Settings.svelte'
+  import Trash from './views/Trash.svelte'
 
   let started = false
+  let showSync = $state(false)
 
   onMount(() => {
     if (navigator.storage?.persist) void navigator.storage.persist()
@@ -32,6 +39,34 @@
       }
     })()
     return startSync()
+  })
+
+  $effect(() => {
+    const profileId = app.profileId
+    if (!profileId) {
+      ;(navigator as any).clearAppBadge?.()
+      return
+    }
+    const sub = liveQuery(async () => {
+      const entities = new Map(
+        (await db.entities.toArray())
+          .filter((entity) => !entity.deleted_at && !entity.archived)
+          .map((entity) => [entity.id, entity])
+      )
+      return (await db.actions.toArray()).filter(
+        (action) =>
+          !action.deleted_at &&
+          !action.archived &&
+          action.active &&
+          entities.has(action.entity_id) &&
+          action.next_due <= todayISO()
+      ).length
+    }).subscribe((count) => {
+      const nav = navigator as any
+      if (count > 0) nav.setAppBadge?.(count)
+      else nav.clearAppBadge?.()
+    })
+    return () => sub.unsubscribe()
   })
 
   $effect(() => {
@@ -76,6 +111,13 @@
   <ProfilePicker />
 {:else}
   <div class="shell">
+    {#if $needRefresh}
+      <div class="update-banner">
+        <span>Nouvelle version disponible.</span>
+        <button class="btn btn-sm btn-primary" onclick={applyPwaUpdate}>Mettre à jour</button>
+      </div>
+    {/if}
+
     <header class="topbar">
       <div class="brand">
         <strong>Entretiens</strong>
@@ -88,7 +130,14 @@
         <a href="#/settings" class:active={route.current.name === 'settings'}><Icon name="settings" size={16} /> Réglages</a>
       </nav>
 
-      <span class={`sync-dot ${app.sync}`} title={syncTitle} aria-label={syncTitle}></span>
+      <button
+        class="sync-button"
+        title={syncTitle}
+        aria-label={syncTitle}
+        onclick={() => (showSync = true)}
+      >
+        <span class={`sync-dot ${app.sync}`}></span>
+      </button>
 
       <button
         class="btn icon-btn"
@@ -117,6 +166,8 @@
         <Entities />
       {:else if route.current.name === 'settings'}
         <Settings />
+      {:else if route.current.name === 'trash'}
+        <Trash />
       {:else if route.current.name === 'profiles'}
         <Profiles />
       {:else if route.current.name === 'profile'}
@@ -140,5 +191,9 @@
         <span>Réglages</span>
       </a>
     </nav>
+
+    {#if showSync}
+      <SyncDialog onclose={() => (showSync = false)} />
+    {/if}
   </div>
 {/if}
