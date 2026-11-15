@@ -2,7 +2,7 @@
 
 ## État
 
-Application complète, prête à configurer. Le détail d'installation est dans `README.md`.
+Application complète et configurée (Supabase, Cloudflare, sauvegarde). Le détail d'installation est dans `README.md`.
 
 ## Commandes
 
@@ -12,7 +12,7 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - `npm run check` — Svelte + TypeScript, doit rester à 0 erreur.
 - `npm test` — Vitest en environnement node.
 - Un seul test : `npx vitest run src/lib/dates.test.ts`.
-- `npm run version:bump -- "description"` — incrémente la version de 0.1 et ajoute une entrée au changelog. Le hook `pre-commit` installé par `prepare` le fait automatiquement quand le commit touche `src/` (message via `VERSION_MESSAGE` ou valeur par défaut).
+- `npm run version:bump -- "description"` — incrémente la version de 0,1 (0.5 → 0.6) et ajoute une entrée au changelog. Le hook `pre-commit` installé par `prepare` le fait automatiquement quand le commit touche `src/` (message via `VERSION_MESSAGE` ou valeur par défaut).
 
 ## Architecture
 
@@ -23,20 +23,21 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 - `src/sw.ts` gère le push et le silence par profil ; `src/lib/theme.ts` gère le thème par appareil.
 - Le thème est toujours appliqué explicitement (`data-theme` = `light` ou `dark`, `color-scheme: only light|dark`) ; le mode « système » résout la préférence et écoute les changements.
 - `src/lib/version.ts` expose la version (format 0.x) et le changelog ; `src/components/Icon.svelte` contient les icônes SVG de navigation.
-- Les actions ont deux modes : intervalle (`interval_value` / `interval_unit`) ou dates fixes annuelles (`annual_dates`, tableau de `MM-DD`). `next_due` reste la source de vérité pour le planning et le cron.
+- Les actions ont deux modes : intervalle (`interval_value` / `interval_unit`) ou dates fixes annuelles (`annual_dates`, tableau de `MM-DD`). `next_due` reste la source de vérité pour le planning et le cron. Elles ont aussi une `description` libre.
 - `saveLocal` / `saveMute` passent les lignes par `toPlain` (clone JSON) avant Dexie : les proxys réactifs de Svelte ne sont pas clonables par IndexedDB.
 - `EntityPhoto` pousse un état d'historique à l'ouverture d'une image : le bouton retour ferme la visionneuse avant de quitter l'entité.
 - Sauvegarde : `.github/workflows/backup.yml` (hebdomadaire), `scripts/backup-photos.mjs`, procédure `docs/backup-restore.md`. Secrets GitHub : `SUPABASE_DB_URL`, `SUPABASE_SERVICE_ROLE_KEY`, variables `SUPABASE_PROJECT_REF`, `AGE_PUBLIC_KEY`.
+- Le dump de sauvegarde utilise `pg_dump` (Docker `postgres:17`), pas `supabase db dump` seul : il doit contenir structure **et** données. Le workflow échoue si `public.sql` ne contient aucun `COPY`/`INSERT`.
+- `SUPABASE_DB_URL` doit être la chaîne **Session pooler** (`postgres.<ref>@aws-0-<region>.pooler.supabase.com:5432`) avec le mot de passe de la base **encodé URL**. La connexion directe `db.<ref>.supabase.co` est IPv6 et échoue dans GitHub Actions.
 
 ## Règles à ne pas casser
 
-- Toute écriture synchronisée passe par `saveLocal` ou `saveMute`, jamais par un `put` Dexie direct : sinon la ligne n'est pas poussée.
+- Toute écriture synchronisée passe par `saveLocal` / `saveMute`, jamais par un `put` Dexie direct : sinon la ligne n'est pas poussée. Ils clonent la ligne en JSON pour éviter les proxys réactifs de Svelte, non clonables par IndexedDB.
 - Les suppressions sont logiques (`deleted_at`). Ne jamais supprimer une ligne en base.
 - L'archivage est distinct de la suppression : `archived` sur les entités et les actions. Le planning exclut les entités/actions archivées et les actions inactives. L'historique est conservé.
 - Le thème est un choix d'appareil stocké dans `localStorage` (`theme`), pas dans Dexie et pas synchronisé.
 - Pour une action à dates fixes, `annual_dates` contient des `MM-DD` triés et `next_due` est recalculé par `nextAnnualDue` ; ne pas stocker l'année dans les dates.
-- Toute écriture Dexie passe par `saveLocal` / `saveMute` qui clonent la ligne en JSON ; ne jamais faire un `put` direct avec un objet réactif.
-- Ne jamais committer un dump, une photo de sauvegarde ou la clé privée `age`. La clé `service_role` utilisée par le script photos est un secret GitHub, jamais dans le dépôt.
+- Ne jamais committer un dump, une photo de sauvegarde ou la clé privée `age`. La clé `service_role` utilisée par le script photos est un secret GitHub, jamais dans le dépôt. `SUPABASE_ACCESS_TOKEN` n'est plus utilisé par la sauvegarde.
 - Toute modification fonctionnelle de `src/` doit passer par `npm run version:bump -- "..."` (ou le hook Git) pour garder `package.json`, `package-lock.json` et `changelog.json` alignés. Le script reste dans la série 0.x ; l'affichage retire le patch (`.0`).
 - `updated_at` est posé par le trigger Postgres. La valeur envoyée par le client est écrasée.
 - `profile_mutes` a une clé composite `(profile_id, entity_id)` et pas d'`id` ; son `onConflict` est `profile_id,entity_id`.
@@ -52,7 +53,7 @@ Application complète, prête à configurer. Le détail d'installation est dans 
 
 Mettre à jour, dans cet ordre : le type et l'interface dans `src/lib/types.ts`, le schéma Dexie, `dexieNames`, `CONFLICT_TARGET`, `TABLES`, la migration SQL avec RLS et trigger `updated_at`, et l'ordre de push si des clés étrangères l'exigent.
 
-Pour ajouter une colonne à une table existante, créer une nouvelle migration (`0003_...sql`) et l'ajouter aussi à `0001_init.sql` pour les installations neuves.
+Pour ajouter une colonne à une table existante, créer une nouvelle migration (`0005_...sql` par exemple) et l'ajouter aussi à `0001_init.sql` pour les installations neuves.
 
 ## Tests
 
