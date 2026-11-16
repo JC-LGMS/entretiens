@@ -3,7 +3,9 @@
 
 <div class="login-wrap">
   <div class="card login-card stack">
-    <div class="logo" aria-hidden="true">🌿</div>
+    <div class="logo" aria-hidden="true">
+      <img src="/icons/icon-192.png" alt="" />
+    </div>
     <h1>Configuration requise</h1>
     <p class="muted">
       Créez un fichier <code>.env</code> à la racine avec les valeurs de votre projet Supabase, puis

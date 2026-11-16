@@ -22,6 +22,7 @@
   import type { PushSubscriptionRow } from '../lib/types'
   import ChangelogDialog from '../components/ChangelogDialog.svelte'
   import SyncDialog from '../components/SyncDialog.svelte'
+  import TemplateEditor from '../components/TemplateEditor.svelte'
 
   let push = $state<PushStatus | 'loading'>('loading')
   let pushBusy = $state(false)
@@ -29,6 +30,7 @@
   let syncBusy = $state(false)
   let showChangelog = $state(false)
   let showSync = $state(false)
+  let showTemplates = $state(false)
   let devices = $state<PushSubscriptionRow[]>([])
   let currentEndpoint = $state<string | null>(null)
   let dataBusy = $state(false)
@@ -202,6 +204,18 @@
   <p class="muted tiny" style="margin-top:8px">Choix enregistré sur cet appareil.</p>
 </div>
 
+<div class="section-title"><h2>Modèles d’actions</h2></div>
+<div class="card card-pad">
+  <div class="settings-row">
+    <div class="grow">
+      <strong>Modèles proposés</strong>
+      <p class="muted tiny">Modifier les noms, fréquences et checklists proposés lors de la création d’une action.</p>
+    </div>
+    <button class="btn btn-sm" onclick={() => (showTemplates = true)}>Gérer</button>
+  </div>
+  <p class="muted tiny" style="margin-top:6px">Modèles enregistrés sur cet appareil.</p>
+</div>
+
 <div class="section-title"><h2>Notifications</h2></div>
 <div class="card card-pad">
   <div class="settings-row">
@@ -329,4 +343,8 @@
 
 {#if showSync}
   <SyncDialog onclose={() => (showSync = false)} />
+{/if}
+
+{#if showTemplates}
+  <TemplateEditor onclose={() => (showTemplates = false)} />
 {/if}

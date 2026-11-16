@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.9.0",
+    "date": "2026-11-16",
+    "changes": [
+      "Logo de l'application, actions mises en avant et modèles éditables"
+    ]
+  },
+  {
     "version": "0.8.0",
     "date": "2026-11-15",
     "changes": [

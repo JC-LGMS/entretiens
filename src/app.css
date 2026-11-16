@@ -158,9 +158,16 @@ h3 {
   width: 34px;
   height: 34px;
   flex: none;
+  overflow: hidden;
   border-radius: 10px;
   background: var(--accent-soft);
-  font-size: 1.1rem;
+}
+
+.topbar .brand .brand-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .topbar .brand strong {
@@ -804,11 +811,6 @@ textarea {
   box-shadow: inset 4px 0 0 var(--later);
 }
 
-.action-card.highlighted {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow);
-}
-
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -892,8 +894,16 @@ textarea {
   width: 58px;
   height: 58px;
   border-radius: 16px;
+  overflow: hidden;
   background: var(--accent-soft);
   font-size: 1.8rem;
+}
+
+.logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .profile-list {
@@ -1060,11 +1070,11 @@ textarea {
 }
 
 .action-card.today {
-  box-shadow: inset 0 0 0 2px var(--today), var(--shadow);
+  box-shadow: inset 4px 0 0 var(--today), var(--shadow);
 }
 
 .action-card.later {
-  box-shadow: inset 0 0 0 2px var(--later), var(--shadow);
+  box-shadow: inset 4px 0 0 var(--later), var(--shadow);
 }
 
 .action-title {
@@ -1092,17 +1102,6 @@ textarea {
   text-decoration: underline;
 }
 
-.selected-hint {
-  display: inline-block;
-  margin-top: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
 .action-photos {
   display: flex;
   flex-wrap: wrap;
@@ -1110,10 +1109,64 @@ textarea {
   margin-top: 10px;
 }
 
+.realisation-delete {
+  border-color: transparent;
+  background: transparent;
+}
+
+.realisation-delete:hover {
+  background: var(--overdue-bg);
+}
+
+.template-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.template-draft {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.template-draft .field {
+  margin-bottom: 4px;
+}
+
+.template-frequency {
+  gap: 8px;
+}
+
+.template-frequency .field:first-child {
+  flex: 0 0 96px;
+}
+
+.template-frequency .field:last-child {
+  flex: 1 1 140px;
+}
+
 .action-card.highlighted {
-  background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow);
+  padding: 16px 18px;
+  background: color-mix(in srgb, var(--accent-soft) 30%, var(--surface));
+}
+
+.action-card.highlighted.overdue {
+  box-shadow: inset 0 0 0 4px var(--overdue), var(--shadow);
+}
+
+.action-card.highlighted.soon {
+  box-shadow: inset 0 0 0 4px var(--soon), var(--shadow);
+}
+
+.action-card.highlighted.today {
+  box-shadow: inset 6px 0 0 var(--today), var(--shadow);
+}
+
+.action-card.highlighted.later {
+  box-shadow: inset 6px 0 0 var(--later), var(--shadow);
 }
 
 .checklist-preview {

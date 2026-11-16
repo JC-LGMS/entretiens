@@ -1,6 +1,6 @@
 <script lang="ts">
   import { intervalLabel } from '../lib/dates'
-  import { ACTION_TEMPLATES, type ActionTemplate } from '../lib/templates'
+  import { loadTemplates, type ActionTemplate } from '../lib/templates'
   import Modal from './Modal.svelte'
 
   let {
@@ -12,6 +12,8 @@
     onpick: (template: ActionTemplate) => void
     onclose: () => void
   } = $props()
+
+  const templates = loadTemplates()
 </script>
 
 <Modal title="Modèles d’actions" {onclose}>
@@ -20,7 +22,7 @@
     d’enregistrer.
   </p>
   <div class="profile-list">
-    {#each ACTION_TEMPLATES as template (template.id)}
+    {#each templates as template (template.id)}
       <button class="profile-option" onclick={() => onpick(template)}>
         <span class="avatar">＋</span>
         <span>

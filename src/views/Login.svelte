@@ -21,7 +21,9 @@
 
 <div class="login-wrap">
   <form class="card login-card stack" onsubmit={submit}>
-    <div class="logo" aria-hidden="true">🌿</div>
+    <div class="logo" aria-hidden="true">
+      <img src="/icons/icon-192.png" alt="" />
+    </div>
     <h1>Entretiens</h1>
     <p class="muted">Suivi et rappel des équipements, plantes et démarches.</p>
 

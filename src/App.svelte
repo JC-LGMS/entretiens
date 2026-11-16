@@ -99,7 +99,9 @@
 {#if !app.ready}
   <div class="login-wrap">
     <div class="stack" style="text-align:center;justify-items:center">
-      <div class="logo" aria-hidden="true">🌿</div>
+      <div class="logo" aria-hidden="true">
+        <img src="/icons/icon-192.png" alt="" />
+      </div>
       <p class="muted">Chargement…</p>
     </div>
   </div>
@@ -129,7 +131,9 @@
 
     <header class="topbar">
       <a class="brand" href="#/" aria-label="Entretiens, retour au planning">
-        <span class="brand-logo" aria-hidden="true">🌿</span>
+        <span class="brand-logo" aria-hidden="true">
+          <img src="/icons/icon-192.png" alt="" />
+        </span>
         <strong>Entretiens</strong>
       </a>
 

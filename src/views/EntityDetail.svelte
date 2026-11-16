@@ -495,9 +495,6 @@
               <span class="badge neutral">Inactive</span>
             {/if}
           </div>
-          {#if focusActionId === action.id}
-            <p class="selected-hint">Action sélectionnée depuis le planning</p>
-          {/if}
           {#if action.description}<p class="muted tiny" style="margin-top:4px">{action.description}</p>{/if}
           <div class="action-meta">
             <span>{intervalLabel(action.interval_value, action.interval_unit)}</span>
@@ -629,7 +626,7 @@
                 <Icon name="edit" size={14} />
               </button>
               <button
-                class="btn btn-sm btn-danger icon-btn"
+                class="btn btn-sm btn-danger icon-btn realisation-delete"
                 aria-label="Supprimer cette réalisation"
                 title="Supprimer"
                 onclick={() => removeLog(entry.log)}

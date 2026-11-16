@@ -9,7 +9,7 @@ export interface ActionTemplate {
   checklist: string[]
 }
 
-export const ACTION_TEMPLATES: ActionTemplate[] = [
+export const DEFAULT_TEMPLATES: ActionTemplate[] = [
   {
     id: 'vidange',
     label: 'Vidange',
@@ -99,3 +99,71 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     ]
   }
 ]
+
+const STORAGE_KEY = 'action.templates'
+const UNITS: IntervalUnit[] = ['day', 'week', 'month', 'year']
+
+export function defaultTemplates(): ActionTemplate[] {
+  return DEFAULT_TEMPLATES.map((template) => ({
+    ...template,
+    checklist: [...template.checklist]
+  }))
+}
+
+function normalizeTemplate(raw: unknown): ActionTemplate | null {
+  if (!raw || typeof raw !== 'object') return null
+  const value = raw as Record<string, unknown>
+  const label = typeof value.label === 'string' ? value.label.trim() : ''
+  if (!label) return null
+  const intervalValue = Math.max(1, Math.round(Number(value.intervalValue) || 1))
+  const intervalUnit = UNITS.includes(value.intervalUnit as IntervalUnit)
+    ? (value.intervalUnit as IntervalUnit)
+    : 'year'
+  const checklist = Array.isArray(value.checklist)
+    ? value.checklist
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : []
+  const id =
+    typeof value.id === 'string' && value.id.trim() ? value.id.trim() : crypto.randomUUID()
+  return {
+    id,
+    label,
+    description: typeof value.description === 'string' ? value.description.trim() : '',
+    intervalValue,
+    intervalUnit,
+    checklist
+  }
+}
+
+export function normalizeTemplates(raw: unknown): ActionTemplate[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map(normalizeTemplate)
+    .filter((template): template is ActionTemplate => template !== null)
+}
+
+export function loadTemplates(): ActionTemplate[] {
+  if (typeof localStorage === 'undefined') return defaultTemplates()
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return defaultTemplates()
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return defaultTemplates()
+    return normalizeTemplates(parsed)
+  } catch {
+    return defaultTemplates()
+  }
+}
+
+export function saveTemplates(templates: ActionTemplate[]): void {
+  if (typeof localStorage === 'undefined') return
+  const clean = normalizeTemplates(templates)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(clean))
+}
+
+export function resetTemplates(): ActionTemplate[] {
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY)
+  return defaultTemplates()
+}
