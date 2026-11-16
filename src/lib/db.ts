@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie'
 import type {
   ActionMuteRow,
   ActionRow,
+  ActionTemplateRow,
   AttachmentBlobRow,
   AttachmentRow,
   ConflictRow,
@@ -21,6 +22,7 @@ class AppDB extends Dexie {
   profiles!: Table<ProfileRow, string>
   entities!: Table<EntityRow, string>
   actions!: Table<ActionRow, string>
+  actionTemplates!: Table<ActionTemplateRow, string>
   logs!: Table<LogRow, string>
   history!: Table<HistoryRow, string>
   profileMutes!: Table<ProfileMuteRow, [string, string]>
@@ -50,6 +52,9 @@ class AppDB extends Dexie {
       attachmentBlobs: 'id, uploaded',
       conflicts: 'id, &[table+row_id], created_at'
     })
+    this.version(3).stores({
+      actionTemplates: 'id, sort_order, updated_at'
+    })
   }
 }
 
@@ -63,7 +68,8 @@ const dexieNames: Record<SyncTable, keyof AppDB> = {
   history: 'history',
   profile_mutes: 'profileMutes',
   action_mutes: 'actionMutes',
-  attachments: 'attachments'
+  attachments: 'attachments',
+  action_templates: 'actionTemplates'
 }
 
 export const CONFLICT_TARGET: Record<SyncTable, string> = {
@@ -74,7 +80,8 @@ export const CONFLICT_TARGET: Record<SyncTable, string> = {
   history: 'id',
   profile_mutes: 'profile_id,entity_id',
   action_mutes: 'profile_id,action_id',
-  attachments: 'id'
+  attachments: 'id',
+  action_templates: 'id'
 }
 
 export function tableFor(table: SyncTable): Table<any, any> {

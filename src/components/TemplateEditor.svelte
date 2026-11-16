@@ -1,11 +1,7 @@
 <script lang="ts">
-  import { untrack } from 'svelte'
-  import {
-    defaultTemplates,
-    loadTemplates,
-    saveTemplates,
-    type ActionTemplate
-  } from '../lib/templates'
+  import { onMount } from 'svelte'
+  import { defaultTemplates, type ActionTemplate } from '../lib/templates'
+  import { loadActionTemplates, saveActionTemplates } from '../lib/templateStore'
   import { UNITS, type IntervalUnit } from '../lib/types'
   import Icon from './Icon.svelte'
   import Modal from './Modal.svelte'
@@ -17,17 +13,30 @@
     intervalValue: number
     intervalUnit: IntervalUnit
     checklistText: string
+    open: boolean
   }
 
   let { onclose }: { onclose: () => void } = $props()
 
-  function toDraft(template: ActionTemplate): Draft {
+  function toDraft(template: ActionTemplate, open = false): Draft {
     const { checklist, ...rest } = template
-    return { ...rest, checklistText: checklist.join('\n') }
+    return { ...rest, checklistText: checklist.join('\n'), open }
   }
 
-  let drafts = $state<Draft[]>(untrack(() => loadTemplates().map(toDraft)))
+  let drafts = $state<Draft[]>([])
+  let loading = $state(true)
+  let saving = $state(false)
   let error = $state('')
+
+  onMount(async () => {
+    try {
+      drafts = (await loadActionTemplates()).map((template) => toDraft(template))
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err)
+    } finally {
+      loading = false
+    }
+  })
 
   function add() {
     drafts = [
@@ -38,7 +47,8 @@
         description: '',
         intervalValue: 1,
         intervalUnit: 'year',
-        checklistText: ''
+        checklistText: '',
+        open: true
       }
     ]
   }
@@ -54,11 +64,11 @@
     if (!confirm('Rétablir tous les modèles par défaut ? Les modifications non enregistrées seront perdues.')) {
       return
     }
-    drafts = defaultTemplates().map(toDraft)
+    drafts = defaultTemplates().map((template) => toDraft(template))
     error = ''
   }
 
-  function save() {
+  async function save() {
     if (drafts.some((draft) => !draft.label.trim())) {
       error = 'Chaque modèle doit avoir un nom.'
       return
@@ -74,81 +84,98 @@
         .map((item) => item.trim())
         .filter(Boolean)
     }))
+    saving = true
+    error = ''
     try {
-      saveTemplates(templates)
+      await saveActionTemplates(templates)
       onclose()
     } catch (err) {
       error = err instanceof Error ? err.message : String(err)
+    } finally {
+      saving = false
     }
   }
 </script>
 
 <Modal title="Modèles d’actions" {onclose}>
   <p class="muted tiny" style="margin-bottom:10px">
-    Ces modèles sont enregistrés sur cet appareil. Ils préremplissent le formulaire d’action.
+    Ces modèles sont communs à tous les profils et à tous les appareils synchronisés.
+    Touchez un modèle pour afficher tous ses champs.
   </p>
 
-  <div class="template-editor">
-    {#each drafts as draft (draft.id)}
-      <div class="template-draft">
-        <div class="row between">
-          <strong>{draft.label.trim() || 'Nouveau modèle'}</strong>
-          <button
-            type="button"
-            class="btn btn-ghost icon-btn"
-            aria-label={`Supprimer ${draft.label || 'ce modèle'}`}
-            title="Supprimer"
-            onclick={() => remove(draft.id)}
-          >
-            <Icon name="trash" size={14} />
-          </button>
-        </div>
+  {#if loading}
+    <p class="muted tiny">Chargement des modèles…</p>
+  {:else}
+    <div class="template-editor">
+      {#each drafts as draft (draft.id)}
+        <details class="template-draft" open={draft.open}>
+          <summary class="template-summary">
+            <span class="template-summary-text">
+              <strong>{draft.label.trim() || 'Nouveau modèle'}</strong>
+              <small class="muted">
+                {draft.description.trim() || 'Aucune description'}
+              </small>
+            </span>
+          </summary>
 
-        <label class="field">
-          <span>Nom</span>
-          <input type="text" bind:value={draft.label} placeholder="Nom du modèle" required />
-        </label>
+          <div class="template-body">
+            <label class="field">
+              <span>Nom</span>
+              <input type="text" bind:value={draft.label} placeholder="Nom du modèle" required />
+            </label>
 
-        <label class="field">
-          <span>Description</span>
-          <textarea bind:value={draft.description} rows="2" placeholder="Description du modèle"></textarea>
-        </label>
+            <label class="field">
+              <span>Description</span>
+              <textarea bind:value={draft.description} rows="2" placeholder="Description du modèle"></textarea>
+            </label>
 
-        <div class="row wrap template-frequency">
-          <label class="field">
-            <span>Fréquence</span>
-            <input type="number" min="1" step="1" bind:value={draft.intervalValue} />
-          </label>
-          <label class="field">
-            <span>Unité</span>
-            <select bind:value={draft.intervalUnit}>
-              {#each UNITS as option}
-                <option value={option.value}>{option.label}</option>
-              {/each}
-            </select>
-          </label>
-        </div>
+            <div class="row wrap template-frequency">
+              <label class="field">
+                <span>Fréquence</span>
+                <input type="number" min="1" step="1" bind:value={draft.intervalValue} />
+              </label>
+              <label class="field">
+                <span>Unité</span>
+                <select bind:value={draft.intervalUnit}>
+                  {#each UNITS as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+              </label>
+            </div>
 
-        <label class="field">
-          <span>Checklist</span>
-          <textarea
-            bind:value={draft.checklistText}
-            rows="3"
-            placeholder="Un point par ligne"
-          ></textarea>
-        </label>
-      </div>
-    {/each}
-  </div>
+            <label class="field">
+              <span>Checklist</span>
+              <textarea
+                bind:value={draft.checklistText}
+                rows="3"
+                placeholder="Un point par ligne"
+              ></textarea>
+            </label>
 
-  <button type="button" class="btn btn-soft btn-sm" style="margin-top:10px" onclick={add}>
-    ＋ Ajouter un modèle
-  </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm template-delete"
+              onclick={() => remove(draft.id)}
+            >
+              <Icon name="trash" size={14} /> Supprimer ce modèle
+            </button>
+          </div>
+        </details>
+      {/each}
+    </div>
 
-  {#if error}<p class="error" style="margin-top:10px">{error}</p>{/if}
+    <button type="button" class="btn btn-soft btn-sm" style="margin-top:10px" onclick={add}>
+      ＋ Ajouter un modèle
+    </button>
 
-  <div class="form-actions">
-    <button type="button" class="btn" onclick={restoreDefaults}>Par défaut</button>
-    <button type="button" class="btn btn-primary" onclick={save}>Enregistrer</button>
-  </div>
+    {#if error}<p class="error" style="margin-top:10px">{error}</p>{/if}
+
+    <div class="form-actions">
+      <button type="button" class="btn" onclick={restoreDefaults}>Par défaut</button>
+      <button type="button" class="btn btn-primary" onclick={save} disabled={saving}>
+        {saving ? 'Enregistrement…' : 'Enregistrer'}
+      </button>
+    </div>
+  {/if}
 </Modal>

@@ -9,6 +9,7 @@ const TABLES: SyncTable[] = [
   'profiles',
   'entities',
   'actions',
+  'action_templates',
   'action_mutes',
   'logs',
   'history',

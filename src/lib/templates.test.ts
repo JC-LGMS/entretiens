@@ -1,29 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  defaultTemplates,
-  loadTemplates,
-  normalizeTemplates,
-  saveTemplates
-} from './templates'
-
-function memoryStorage() {
-  const data = new Map<string, string>()
-  return {
-    getItem: (key: string) => data.get(key) ?? null,
-    setItem: (key: string, value: string) => void data.set(key, value),
-    removeItem: (key: string) => void data.delete(key)
-  }
-}
+import { describe, expect, it } from 'vitest'
+import { DEFAULT_TEMPLATES, defaultTemplates, normalizeTemplates } from './templates'
 
 describe('modèles d’actions', () => {
-  beforeEach(() => {
-    vi.stubGlobal('localStorage', memoryStorage())
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
   it('retourne une copie des modèles par défaut', () => {
     const first = defaultTemplates()
     const second = defaultTemplates()
@@ -31,6 +9,15 @@ describe('modèles d’actions', () => {
     expect(first).not.toBe(second)
     first[0].checklist.push('modifié')
     expect(second[0].checklist).not.toContain('modifié')
+  })
+
+  it('utilise des identifiants stables et uniques', () => {
+    const ids = DEFAULT_TEMPLATES.map((template) => template.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const id of ids) {
+      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+    }
+    expect(defaultTemplates().map((template) => template.id)).toEqual(ids)
   })
 
   it('nettoie les modèles importés', () => {
@@ -57,13 +44,5 @@ describe('modèles d’actions', () => {
   it('ignore une valeur qui n’est pas un tableau', () => {
     expect(normalizeTemplates(null)).toEqual([])
     expect(normalizeTemplates({ label: 'Modèle' })).toEqual([])
-  })
-
-  it('enregistre et recharge les modèles, y compris une liste vide', () => {
-    saveTemplates(defaultTemplates().slice(0, 2))
-    expect(loadTemplates()).toHaveLength(2)
-
-    saveTemplates([])
-    expect(loadTemplates()).toEqual([])
   })
 })

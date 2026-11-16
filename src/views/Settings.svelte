@@ -213,7 +213,7 @@
     </div>
     <button class="btn btn-sm" onclick={() => (showTemplates = true)}>Gérer</button>
   </div>
-  <p class="muted tiny" style="margin-top:6px">Modèles enregistrés sur cet appareil.</p>
+  <p class="muted tiny" style="margin-top:6px">Modèles synchronisés et partagés par tous les profils.</p>
 </div>
 
 <div class="section-title"><h2>Notifications</h2></div>

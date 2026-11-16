@@ -6,6 +6,7 @@ import { APP_VERSION } from './version'
 import type {
   ActionMuteRow,
   ActionRow,
+  ActionTemplateRow,
   AttachmentRow,
   EntityRow,
   HistoryRow,
@@ -20,6 +21,7 @@ interface BackupData {
   profiles: ProfileRow[]
   entities: EntityRow[]
   actions: ActionRow[]
+  action_templates: ActionTemplateRow[]
   logs: LogRow[]
   history: HistoryRow[]
   profile_mutes: ProfileMuteRow[]
@@ -36,6 +38,7 @@ export async function exportBackup(): Promise<void> {
   const profiles = await db.profiles.toArray()
   const entities = await db.entities.toArray()
   const actions = await db.actions.toArray()
+  const actionTemplates = await db.actionTemplates.toArray()
   const logs = await db.logs.toArray()
   const history = await db.history.toArray()
   const profileMutes = await db.profileMutes.toArray()
@@ -48,6 +51,7 @@ export async function exportBackup(): Promise<void> {
     profiles,
     entities,
     actions,
+    action_templates: actionTemplates,
     logs,
     history,
     profile_mutes: profileMutes,
@@ -89,6 +93,7 @@ export async function importBackup(file: File): Promise<void> {
   for (const row of data.profiles ?? []) await saveLocal('profiles', row)
   for (const row of data.entities ?? []) await saveLocal('entities', row)
   for (const row of data.actions ?? []) await saveLocal('actions', row)
+  for (const row of data.action_templates ?? []) await saveLocal('action_templates', row)
   for (const row of data.logs ?? []) await saveLocal('logs', row)
   for (const row of data.history ?? []) await saveLocal('history', row)
   for (const row of data.attachments ?? []) await saveLocal('attachments', row)

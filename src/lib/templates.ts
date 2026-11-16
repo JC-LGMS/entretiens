@@ -9,9 +9,11 @@ export interface ActionTemplate {
   checklist: string[]
 }
 
+// Les identifiants des modèles par défaut sont stables : la migration SQL insère
+// les mêmes lignes, ce qui évite les doublons avant le premier pull.
 export const DEFAULT_TEMPLATES: ActionTemplate[] = [
   {
-    id: 'vidange',
+    id: 'a1b2c3d4-0001-4a2b-8c3d-000000000001',
     label: 'Vidange',
     description: 'Vidange et remplacement des consommables.',
     intervalValue: 1,
@@ -19,7 +21,7 @@ export const DEFAULT_TEMPLATES: ActionTemplate[] = [
     checklist: ['Huile', 'Filtre', 'Niveaux']
   },
   {
-    id: 'taille',
+    id: 'a1b2c3d4-0002-4a2b-8c3d-000000000002',
     label: 'Taille annuelle',
     description: 'Taille d’entretien de la plante.',
     intervalValue: 1,
@@ -27,7 +29,7 @@ export const DEFAULT_TEMPLATES: ActionTemplate[] = [
     checklist: []
   },
   {
-    id: 'assurance',
+    id: 'a1b2c3d4-0003-4a2b-8c3d-000000000003',
     label: 'Assurance',
     description: 'Renouvellement du contrat.',
     intervalValue: 1,
@@ -35,7 +37,7 @@ export const DEFAULT_TEMPLATES: ActionTemplate[] = [
     checklist: []
   },
   {
-    id: 'controle-technique',
+    id: 'a1b2c3d4-0004-4a2b-8c3d-000000000004',
     label: 'Contrôle technique',
     description: 'Contrôle périodique du véhicule.',
     intervalValue: 2,
@@ -43,7 +45,7 @@ export const DEFAULT_TEMPLATES: ActionTemplate[] = [
     checklist: []
   },
   {
-    id: 'poele-granules',
+    id: 'a1b2c3d4-0005-4a2b-8c3d-000000000005',
     label: 'Entretien poêle à granulés',
     description: 'Entretien annuel du poêle et de son conduit.',
     intervalValue: 1,
@@ -57,7 +59,7 @@ export const DEFAULT_TEMPLATES: ActionTemplate[] = [
     ]
   },
   {
-    id: 'pompe-a-chaleur',
+    id: 'a1b2c3d4-0006-4a2b-8c3d-000000000006',
     label: 'Entretien pompe à chaleur',
     description: 'Entretien périodique de la pompe à chaleur.',
     intervalValue: 2,
@@ -71,7 +73,7 @@ export const DEFAULT_TEMPLATES: ActionTemplate[] = [
     ]
   },
   {
-    id: 'impots-bic',
+    id: 'a1b2c3d4-0007-4a2b-8c3d-000000000007',
     label: 'Déclaration BIC',
     description: 'Déclaration annuelle des bénéfices industriels et commerciaux.',
     intervalValue: 1,
@@ -85,7 +87,7 @@ export const DEFAULT_TEMPLATES: ActionTemplate[] = [
     ]
   },
   {
-    id: 'impots-revenu',
+    id: 'a1b2c3d4-0008-4a2b-8c3d-000000000008',
     label: 'Déclaration de revenus',
     description: 'Déclaration annuelle des revenus.',
     intervalValue: 1,
@@ -100,7 +102,20 @@ export const DEFAULT_TEMPLATES: ActionTemplate[] = [
   }
 ]
 
-const STORAGE_KEY = 'action.templates'
+// Anciens identifiants (0.9 et avant) enregistrés dans localStorage.
+export const LEGACY_TEMPLATE_IDS: Record<string, string> = {
+  vidange: DEFAULT_TEMPLATES[0].id,
+  taille: DEFAULT_TEMPLATES[1].id,
+  assurance: DEFAULT_TEMPLATES[2].id,
+  'controle-technique': DEFAULT_TEMPLATES[3].id,
+  'poele-granules': DEFAULT_TEMPLATES[4].id,
+  'pompe-a-chaleur': DEFAULT_TEMPLATES[5].id,
+  'impots-bic': DEFAULT_TEMPLATES[6].id,
+  'impots-revenu': DEFAULT_TEMPLATES[7].id
+}
+
+export const LEGACY_STORAGE_KEY = 'action.templates'
+
 const UNITS: IntervalUnit[] = ['day', 'week', 'month', 'year']
 
 export function defaultTemplates(): ActionTemplate[] {
@@ -142,28 +157,4 @@ export function normalizeTemplates(raw: unknown): ActionTemplate[] {
   return raw
     .map(normalizeTemplate)
     .filter((template): template is ActionTemplate => template !== null)
-}
-
-export function loadTemplates(): ActionTemplate[] {
-  if (typeof localStorage === 'undefined') return defaultTemplates()
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return defaultTemplates()
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return defaultTemplates()
-    return normalizeTemplates(parsed)
-  } catch {
-    return defaultTemplates()
-  }
-}
-
-export function saveTemplates(templates: ActionTemplate[]): void {
-  if (typeof localStorage === 'undefined') return
-  const clean = normalizeTemplates(templates)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(clean))
-}
-
-export function resetTemplates(): ActionTemplate[] {
-  if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY)
-  return defaultTemplates()
 }

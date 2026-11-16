@@ -124,6 +124,18 @@ export interface AttachmentRow {
   deleted_at: string | null
 }
 
+export interface ActionTemplateRow {
+  id: string
+  label: string
+  description: string
+  interval_value: number
+  interval_unit: IntervalUnit
+  checklist: string[]
+  sort_order: number
+  updated_at: string
+  deleted_at: string | null
+}
+
 export interface AttachmentBlobRow {
   id: string
   blob: Blob
@@ -164,6 +176,7 @@ export type SyncTable =
   | 'profile_mutes'
   | 'action_mutes'
   | 'attachments'
+  | 'action_templates'
 
 export interface OutboxRow {
   seq?: number

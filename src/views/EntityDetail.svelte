@@ -465,11 +465,11 @@
       <p class="tiny">Ajoutez par exemple « Entretien tous les 6 mois ».</p>
     </div>
   {:else}
-    <div class="stack">
+    <div class="stack action-stack">
       {#each visibleActions as action (action.id)}
         <div
           class={`card action-card ${urgencyOf(action.next_due)}`}
-          class:highlighted={focusActionId === action.id}
+          class:selected-action={focusActionId === action.id}
           id={`action-${action.id}`}
         >
           <div class="action-head">
@@ -553,11 +553,11 @@
     </div>
 
     {#if showArchivedActions}
-      <div class="stack">
+      <div class="stack action-stack">
         {#each archivedActions as action (action.id)}
           <div
             class="card action-card"
-            class:highlighted={focusActionId === action.id}
+            class:selected-action={focusActionId === action.id}
             id={`action-${action.id}`}
             style="opacity:0.72"
           >
