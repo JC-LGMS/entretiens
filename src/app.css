@@ -170,6 +170,13 @@ h3 {
   object-fit: cover;
 }
 
+.topbar .brand .brand-text {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  line-height: 1.1;
+}
+
 .topbar .brand strong {
   overflow: hidden;
   text-overflow: ellipsis;

@@ -12,6 +12,7 @@
   import { isConfigured } from './lib/supabase'
   import { startSync, syncNow } from './lib/sync'
   import { themeState, toggleTheme } from './lib/theme'
+  import { APP_VERSION } from './lib/version'
   import Icon from './components/Icon.svelte'
   import SyncDialog from './components/SyncDialog.svelte'
   import ConfigMissing from './views/ConfigMissing.svelte'
@@ -134,7 +135,10 @@
         <span class="brand-logo" aria-hidden="true">
           <img src="/icons/icon-192.png" alt="" />
         </span>
-        <strong>Entretiens</strong>
+        <span class="brand-text">
+          <strong>Entretiens</strong>
+          <small>v{APP_VERSION}</small>
+        </span>
       </a>
 
       <nav class="desktop-nav" aria-label="Navigation">
