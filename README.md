@@ -163,7 +163,7 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 - Le titre de l'application et le logo ramènent au planning ; le logo reprend l'icône de l'application.
 - Un conflit de synchronisation affiche une bannière d'alerte qui ouvre directement le dialogue de résolution.
 - Une action peut être récurrente par intervalle (unité par défaut : an) ou par dates fixes (deux dates préremplies).
-- Chaque action peut être assignée à un profil, avoir un délai de rappel et une relance des retards (1 jour par défaut).
+- Chaque action peut être assignée à un profil, avoir un délai de rappel et une relance des retards (tous les jours par défaut).
 - Les modèles proposent notamment poêle à granulés, pompe à chaleur, déclaration BIC et déclaration de revenus ; un clic ouvre le formulaire prérempli avec la checklist du modèle.
 - Réglages > Modèles d'actions : les modèles sont repliés par défaut et un clic affiche tous les champs. Modifier les noms, descriptions, fréquences et checklists, ajouter ou supprimer un modèle et rétablir les valeurs par défaut. Les modèles sont partagés par tous les profils et synchronisés entre les appareils.
 - Archiver une action ou une entité : disparition du planning, historique conservé, restauration possible.
@@ -241,7 +241,7 @@ Un hook Git `pre-commit` est installé par `npm install` (script `prepare`). Il 
 
 - **Profils déclaratifs** : un seul compte d'accès, plusieurs profils. Le profil courant est stocké dans IndexedDB et sert à signer les journaux et les préférences de notification.
 - **Entités** : équipement, plante ou administratif, avec photo, documents joints, garantie et coût total. Une entité peut être archivée pour la retirer du planning sans perdre son historique. Les documents s'ajoutent depuis le formulaire d'entité et restent consultables dans le bloc de l'entité.
-- **Actions** : libellé, description libre, assignation à un profil, récurrence par intervalle ou dates fixes, délai de rappel, relance des retards (1 jour par défaut), checklist et photos avec titre. Une action peut être archivée ou désactivée. Le titre et le crayon ouvrent la modification ; les photos s'ajoutent depuis ce formulaire.
+- **Actions** : libellé, description libre, assignation à un profil, récurrence par intervalle ou dates fixes, délai de rappel, relance des retards (tous les jours par défaut, au moins 1 jour), checklist et photos avec titre. Une action peut être archivée ou désactivée. Le titre et le crayon ouvrent la modification ; les photos s'ajoutent depuis ce formulaire.
 - **Modèles** : poêle à granulés, pompe à chaleur, déclarations BIC et de revenus, etc. Un modèle ouvre le formulaire prérempli avec sa checklist. Les modèles sont éditables dans Réglages > Modèles d'actions ; ils sont partagés par tous les profils et synchronisés entre les appareils.
 - **Réalisation** : crée un journal, met à jour `last_done` et recalcule `next_due` (intervalle ou prochaine date fixe). Le coût saisi alimente le coût total de l'action.
 - **Planning** : page d'accueil. Photo de l'entité, liseré complet pour les retards et les échéances à moins de 7 jours, barre latérale colorée sinon, recherche, filtre « Mes actions », vues liste/semaine/2 semaines/mois avec navigation de périodes, date du jour et nombre d'actions à droite du titre. La vue et la période sont conservées par appareil. « C'est fait » depuis le planning. Un clic sur une action ouvre la fiche et met l'action en avant. Le silence par profil masque le rappel push mais laisse l'échéance visible.
@@ -267,7 +267,7 @@ Fichiers clés : `src/lib/db.ts`, `src/lib/sync.ts`, `src/lib/photos.ts`, `src/l
 ## 13. Rappels push
 
 - `src/lib/push.ts` abonne l'appareil et enregistre l'abonnement (libellé d'appareil, dernière activité) dans `push_subscriptions`.
-- `supabase/functions/send-reminders/index.ts` notifie à J-`notify_lead_days`, relance les retards selon `overdue_repeat_days`, prévient 30 jours avant et le jour de la fin de garantie, puis marque `last_notified_on` / `warranty_notified_on`.
+- `supabase/functions/send-reminders/index.ts` notifie à J-`notify_lead_days`, relance les retards tous les `overdue_repeat_days` jours (au moins 1, donc tous les jours par défaut), prévient 30 jours avant et le jour de la fin de garantie, puis marque `last_notified_on` / `warranty_notified_on`.
 - Le service worker (`src/sw.ts`) lit le profil courant, `profile_mutes` et `action_mutes` dans IndexedDB ; si l'entité ou l'action est coupée pour ce profil, il n'affiche rien.
 - Un échec du cron un jour donné ne rattrape pas le rappel manqué ; l'échéance reste visible dans le planning.
 

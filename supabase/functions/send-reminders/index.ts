@@ -96,7 +96,7 @@ Deno.serve(async (request) => {
   for (const action of actions ?? []) {
     const diff = dayDiff(action.next_due, today)
     const lead = action.notify_lead_days ?? 0
-    const repeat = action.overdue_repeat_days ?? 0
+    const repeat = Math.max(1, action.overdue_repeat_days ?? 1)
     const leadDay = diff === lead
     const overdueDay = diff < 0 && repeat > 0 && -diff % repeat === 0
     if (!leadDay && !overdueDay) continue

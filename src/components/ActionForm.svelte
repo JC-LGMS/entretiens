@@ -139,8 +139,8 @@
       error = 'Ajoutez au moins une date dans l’année.'
       return
     }
-    if (!Number.isFinite(lead) || lead < 0 || !Number.isFinite(repeat) || repeat < 0) {
-      error = 'Les délais de rappel doivent être positifs ou nuls.'
+    if (!Number.isFinite(lead) || lead < 0 || !Number.isFinite(repeat) || repeat < 1) {
+      error = 'Les délais de rappel doivent être positifs (relance au moins 1 jour).'
       return
     }
     if (!isDate(effectiveNext)) {
@@ -153,6 +153,7 @@
       const now = new Date().toISOString()
       const intervalValue = mode === 'interval' ? Math.max(1, Math.round(value)) : 1
       const intervalUnit = mode === 'interval' ? unit : 'year'
+      const repeatDays = Math.max(1, Math.round(repeat))
       const dates = mode === 'annual' ? sortedAnnual : []
       const checklist = checklistText
         .split('\n')
@@ -174,7 +175,7 @@
           archived: false,
           annual_dates: dates,
           notify_lead_days: Math.round(lead),
-          overdue_repeat_days: Math.round(repeat),
+          overdue_repeat_days: repeatDays,
           last_notified_on: null,
           checklist,
           notified_for: null,
@@ -186,7 +187,7 @@
       } else {
         const notificationChanged =
           action.notify_lead_days !== Math.round(lead) ||
-          action.overdue_repeat_days !== Math.round(repeat)
+          action.overdue_repeat_days !== repeatDays
         const updated: ActionRow = {
           ...action,
           label: label.trim(),
@@ -198,7 +199,7 @@
           next_due: effectiveNext,
           active,
           notify_lead_days: Math.round(lead),
-          overdue_repeat_days: Math.round(repeat),
+          overdue_repeat_days: repeatDays,
           last_notified_on:
             effectiveNext !== action.next_due || notificationChanged
               ? null
@@ -296,7 +297,7 @@
       </label>
       <label class="field" style="flex:1">
         <span>Relancer retard (jours)</span>
-        <input type="number" min="0" bind:value={repeat} />
+        <input type="number" min="1" bind:value={repeat} />
       </label>
     </div>
 
