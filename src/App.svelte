@@ -145,9 +145,13 @@
       </button>
     {/if}
 
-    {#if backupDays !== null && backupDays >= BACKUP_REMINDER_DAYS}
+    {#if backupDays === null || backupDays >= BACKUP_REMINDER_DAYS}
       <div class="backup-banner">
-        <span>💾 Dernière sauvegarde il y a {backupDays} jours.</span>
+        <span>
+          💾 {backupDays === null
+            ? 'Aucune sauvegarde exportée sur cet appareil.'
+            : `Dernière sauvegarde il y a ${backupDays} jours.`}
+        </span>
         <button class="btn btn-sm btn-primary" onclick={saveBackup} disabled={backupBusy}>
           {backupBusy ? '…' : 'Sauvegarder'}
         </button>

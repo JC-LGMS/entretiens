@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.15.0",
+    "date": "2026-11-22",
+    "changes": [
+      "Bandeau de sauvegarde aussi sans export"
+    ]
+  },
+  {
     "version": "0.14.0",
     "date": "2026-11-22",
     "changes": [
