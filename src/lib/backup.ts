@@ -34,9 +34,16 @@ async function blobBytes(blob: Blob): Promise<Uint8Array> {
 }
 
 const LAST_EXPORT_KEY = 'backup.lastExport'
+export const BACKUP_REMINDER_DAYS = 90
 
 export function lastExportAt(): string | null {
   return typeof localStorage === 'undefined' ? null : localStorage.getItem(LAST_EXPORT_KEY)
+}
+
+export function backupAgeDays(): number | null {
+  const value = lastExportAt()
+  if (!value) return null
+  return Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000)
 }
 
 export async function exportBackup(): Promise<void> {

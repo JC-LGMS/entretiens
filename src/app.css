@@ -1008,7 +1008,8 @@ textarea {
   flex: 1;
 }
 
-.update-banner {
+.update-banner,
+.backup-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;

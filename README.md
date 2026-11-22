@@ -177,7 +177,8 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 - Sauvegarde utilisateur : export/import ZIP (JSON + photos + documents).
 - Réglages > Notifications > Tester : envoie un push immédiat à l'appareil courant, sans attendre le cron.
 - Réglages > Activité : actions en retard, réalisations du mois et répartition par profil.
-- Réglages > Données : date du dernier export et rappel après 30 jours sans sauvegarde.
+- Réglages > Données : date du dernier export et rappel après 3 mois sans sauvegarde.
+- Un bandeau global propose de sauvegarder dès que le dernier export ZIP date de plus de 3 mois.
 - Indicateur de synchronisation cliquable : file d'attente, erreur, conflits et résolution.
 - Gestion des appareils push et mise à jour PWA avec bouton.
 - Thème clair/sombre via l'icône de l'en-tête, conservé sur l'appareil, y compris sur mobile.

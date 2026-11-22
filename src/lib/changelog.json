@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.14.0",
+    "date": "2026-11-22",
+    "changes": [
+      "Icône dans les notifications et bandeau de sauvegarde trimestriel"
+    ]
+  },
+  {
     "version": "0.13.0",
     "date": "2026-11-22",
     "changes": [

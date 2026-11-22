@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { liveQuery } from 'dexie'
+  import { BACKUP_REMINDER_DAYS, backupAgeDays, exportBackup } from './lib/backup'
   import { db } from './lib/db'
   import { todayISO } from './lib/dates'
   import { initAuth } from './lib/auth'
@@ -28,6 +29,20 @@
 
   let started = false
   let showSync = $state(false)
+  let backupDays = $state<number | null>(backupAgeDays())
+  let backupBusy = $state(false)
+
+  async function saveBackup() {
+    backupBusy = true
+    try {
+      await exportBackup()
+      backupDays = backupAgeDays()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err))
+    } finally {
+      backupBusy = false
+    }
+  }
 
   onMount(() => {
     if (navigator.storage?.persist) void navigator.storage.persist()
@@ -128,6 +143,15 @@
         </span>
         <span class="conflict-action">Traiter</span>
       </button>
+    {/if}
+
+    {#if backupDays !== null && backupDays >= BACKUP_REMINDER_DAYS}
+      <div class="backup-banner">
+        <span>💾 Dernière sauvegarde il y a {backupDays} jours.</span>
+        <button class="btn btn-sm btn-primary" onclick={saveBackup} disabled={backupBusy}>
+          {backupBusy ? '…' : 'Sauvegarder'}
+        </button>
+      </div>
     {/if}
 
     <header class="topbar">

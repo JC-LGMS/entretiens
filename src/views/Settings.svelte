@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { liveQuery } from 'dexie'
   import { signOut } from '../lib/auth'
-  import { exportBackup, importBackup, lastExportAt } from '../lib/backup'
+  import { BACKUP_REMINDER_DAYS, exportBackup, importBackup, lastExportAt } from '../lib/backup'
   import { db } from '../lib/db'
   import { todayISO } from '../lib/dates'
   import { activityStats, type ActivityStats } from '../lib/stats'
@@ -400,9 +400,9 @@
     <p class="notice" style="margin-top:10px">
       Aucun export ZIP enregistré sur cet appareil. Pensez à sauvegarder vos données.
     </p>
-  {:else if lastExportDays >= 30}
+  {:else if lastExportDays >= BACKUP_REMINDER_DAYS}
     <p class="notice" style="margin-top:10px">
-      Dernier export il y a {lastExportDays} jours. Pensez à sauvegarder vos données.
+      Dernier export il y a {lastExportDays} jours (plus de 3 mois). Pensez à sauvegarder vos données.
     </p>
   {:else}
     <p class="muted tiny" style="margin-top:10px">
