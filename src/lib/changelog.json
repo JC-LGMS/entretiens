@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.13.0",
+    "date": "2026-11-22",
+    "changes": [
+      "Test de notification, duplication d'action, rappel de sauvegarde et statistiques"
+    ]
+  },
+  {
     "version": "0.12.0",
     "date": "2026-11-21",
     "changes": [

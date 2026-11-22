@@ -61,7 +61,7 @@
   let showModifications = $state(false)
   let showTemplates = $state(false)
   let editingLog = $state<LogRow | null>(null)
-  let actionForm = $state<{ open: boolean; action?: ActionRow; template?: ActionTemplate }>({
+  let actionForm = $state<{ open: boolean; action?: ActionRow; template?: ActionTemplate; duplicate?: ActionRow }>({
     open: false
   })
   let doneAction = $state<ActionRow | null>(null)
@@ -359,6 +359,10 @@
     actionForm = { open: true, action }
   }
 
+  function duplicateAction(action: ActionRow) {
+    actionForm = { open: true, duplicate: action }
+  }
+
   function pickTemplate(template: ActionTemplate) {
     showTemplates = false
     actionForm = { open: true, template }
@@ -526,6 +530,9 @@
             <button class="btn btn-sm btn-ghost" onclick={() => toggleActionMute(action)}>
               {actionMuted(action) ? '🔕' : '🔔'}
             </button>
+            <button class="btn btn-sm btn-ghost" onclick={() => duplicateAction(action)}>
+              Dupliquer
+            </button>
             <button class="btn btn-sm btn-ghost archive-btn" onclick={() => toggleActionArchive(action)}>
               Archiver
             </button>
@@ -678,6 +685,7 @@
     entityName={data.entity?.name}
     action={actionForm.action}
     template={actionForm.template}
+    duplicate={actionForm.duplicate}
     onclose={() => (actionForm = { open: false })}
   />
 {/if}

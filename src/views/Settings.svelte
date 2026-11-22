@@ -1,7 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { liveQuery } from 'dexie'
   import { signOut } from '../lib/auth'
-  import { exportBackup, importBackup } from '../lib/backup'
+  import { exportBackup, importBackup, lastExportAt } from '../lib/backup'
+  import { db } from '../lib/db'
+  import { todayISO } from '../lib/dates'
+  import { activityStats, type ActivityStats } from '../lib/stats'
   import {
     currentPushEndpoint,
     disablePush,
@@ -11,6 +15,7 @@
     listPushSubscriptions,
     pushSupported,
     revokePushSubscription,
+    sendTestPush,
     type PushStatus
   } from '../lib/push'
   import { setCurrentProfile } from '../lib/profiles'
@@ -35,12 +40,36 @@
   let currentEndpoint = $state<string | null>(null)
   let dataBusy = $state(false)
   let dataError = $state('')
+  let pushTestBusy = $state(false)
+  let pushTestMessage = $state('')
+  let pushTestError = $state('')
+  let lastExport = $state<string | null>(lastExportAt())
+  let stats = $state<ActivityStats>({
+    overdue: 0,
+    month: 0,
+    byProfile: []
+  })
 
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
 
   onMount(() => {
     void refreshPush()
     void refreshDevices()
+  })
+
+  $effect(() => {
+    const sub = liveQuery(async () => {
+      const today = todayISO()
+      const [actions, logs, profiles] = await Promise.all([
+        db.actions.toArray(),
+        db.logs.toArray(),
+        db.profiles.toArray()
+      ])
+      return activityStats(actions, logs, profiles, today)
+    }).subscribe((value) => {
+      stats = value
+    })
+    return () => sub.unsubscribe()
   })
 
   async function refreshPush() {
@@ -103,10 +132,25 @@
     dataError = ''
     try {
       await exportBackup()
+      lastExport = lastExportAt()
     } catch (err) {
       dataError = err instanceof Error ? err.message : String(err)
     } finally {
       dataBusy = false
+    }
+  }
+
+  async function testPush() {
+    pushTestBusy = true
+    pushTestMessage = ''
+    pushTestError = ''
+    try {
+      await sendTestPush(await currentPushEndpoint())
+      pushTestMessage = 'Notification de test envoyée à cet appareil.'
+    } catch (err) {
+      pushTestError = err instanceof Error ? err.message : String(err)
+    } finally {
+      pushTestBusy = false
     }
   }
 
@@ -173,6 +217,12 @@
             ? 'Non supportées'
             : 'Désactivées'
   )
+
+  const lastExportDays = $derived.by(() => {
+    const value = lastExport
+    if (!value) return null
+    return Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000)
+  })
 </script>
 
 <div class="section-title"><h2>Profil</h2></div>
@@ -236,6 +286,19 @@
       Sur iPhone, ajoutez d'abord l'application à l'écran d'accueil, puis activez les notifications.
     </p>
   {/if}
+  {#if push === 'subscribed'}
+    <div class="settings-row" style="margin-top:10px">
+      <div class="grow">
+        <strong>Tester</strong>
+        <p class="muted tiny">Envoie une notification immédiate à cet appareil.</p>
+      </div>
+      <button class="btn btn-sm btn-soft" onclick={testPush} disabled={pushTestBusy}>
+        {pushTestBusy ? '…' : 'Tester'}
+      </button>
+    </div>
+    {#if pushTestMessage}<p class="notice" style="margin-top:10px">{pushTestMessage}</p>{/if}
+    {#if pushTestError}<p class="error" style="margin-top:10px">{pushTestError}</p>{/if}
+  {/if}
   {#if pushError}<p class="error" style="margin-top:10px">{pushError}</p>{/if}
 </div>
 
@@ -258,6 +321,26 @@
     {/each}
   </div>
 {/if}
+
+<div class="section-title"><h2>Activité</h2></div>
+<div class="card card-pad">
+  <div class="row">
+    <div class="grow">
+      <strong>{stats.overdue}</strong>
+      <p class="muted tiny">Action{stats.overdue > 1 ? 's' : ''} en retard</p>
+    </div>
+    <div class="grow">
+      <strong>{stats.month}</strong>
+      <p class="muted tiny">Réalisation{stats.month > 1 ? 's' : ''} ce mois</p>
+    </div>
+  </div>
+  {#if stats.byProfile.length}
+    <p class="muted tiny" style="margin-top:8px">
+      Ce mois :
+      {stats.byProfile.map(([name, count]) => `${name} ${count}`).join(' · ')}
+    </p>
+  {/if}
+</div>
 
 <div class="section-title"><h2>Synchronisation</h2></div>
 <div class="card card-pad">
@@ -313,6 +396,19 @@
     <button class="btn btn-sm" onclick={() => (showSync = true)}>Détails</button>
   </div>
   {#if dataError}<p class="error" style="margin-top:10px">{dataError}</p>{/if}
+  {#if lastExportDays === null}
+    <p class="notice" style="margin-top:10px">
+      Aucun export ZIP enregistré sur cet appareil. Pensez à sauvegarder vos données.
+    </p>
+  {:else if lastExportDays >= 30}
+    <p class="notice" style="margin-top:10px">
+      Dernier export il y a {lastExportDays} jours. Pensez à sauvegarder vos données.
+    </p>
+  {:else}
+    <p class="muted tiny" style="margin-top:10px">
+      Dernier export : {new Date(lastExport as string).toLocaleDateString('fr-FR')}.
+    </p>
+  {/if}
 </div>
 
 <div class="section-title"><h2>Compte</h2></div>

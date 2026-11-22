@@ -126,6 +126,19 @@ export async function revokePushSubscription(endpoint: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+export async function sendTestPush(endpoint: string | null): Promise<number> {
+  if (!supabase) throw new Error('Supabase non configuré')
+  const { data, error } = await supabase.functions.invoke('send-reminders', {
+    body: { test: true, endpoint }
+  })
+  if (error) throw new Error(`Test de notification : ${error.message}`)
+  const sent = (data as { sent?: number } | null)?.sent ?? 0
+  if (sent === 0) {
+    throw new Error('Aucune notification délivrée. Vérifiez l’abonnement de cet appareil.')
+  }
+  return sent
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')

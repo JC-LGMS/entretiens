@@ -164,6 +164,7 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 - Un conflit de synchronisation affiche une bannière d'alerte qui ouvre directement le dialogue de résolution.
 - Une action peut être récurrente par intervalle (unité par défaut : an) ou par dates fixes (deux dates préremplies).
 - Chaque action peut être assignée à un profil, avoir un délai de rappel et une relance des retards (tous les jours par défaut).
+- Une action peut être dupliquée depuis sa fiche : libellé, intervalle, checklist et rappels sont préremplis, une nouvelle échéance est calculée.
 - Les modèles proposent notamment poêle à granulés, pompe à chaleur, déclaration BIC et déclaration de revenus ; un clic ouvre le formulaire prérempli avec la checklist du modèle.
 - Réglages > Modèles d'actions : les modèles sont repliés par défaut et un clic affiche tous les champs. Modifier les noms, descriptions, fréquences et checklists, ajouter ou supprimer un modèle et rétablir les valeurs par défaut. Les modèles sont partagés par tous les profils et synchronisés entre les appareils.
 - Archiver une action ou une entité : disparition du planning, historique conservé, restauration possible.
@@ -174,6 +175,9 @@ Après publication, ouvrir l'URL sur iPhone (Safari > Partager > « Sur l'écran
 - Les documents d'entité s'ajoutent à la création ou à la modification de l'entité et restent visibles dans le bloc de l'entité.
 - Corbeille : restaurer une entité, une action ou une réalisation supprimée.
 - Sauvegarde utilisateur : export/import ZIP (JSON + photos + documents).
+- Réglages > Notifications > Tester : envoie un push immédiat à l'appareil courant, sans attendre le cron.
+- Réglages > Activité : actions en retard, réalisations du mois et répartition par profil.
+- Réglages > Données : date du dernier export et rappel après 30 jours sans sauvegarde.
 - Indicateur de synchronisation cliquable : file d'attente, erreur, conflits et résolution.
 - Gestion des appareils push et mise à jour PWA avec bouton.
 - Thème clair/sombre via l'icône de l'en-tête, conservé sur l'appareil, y compris sur mobile.
@@ -214,6 +218,7 @@ Utiliser **Settings > Build > Build variables and secrets**, pas **Settings > Va
 - Secrets VAPID présents dans Supabase.
 - Fonction `send-reminders` déployée et cron `pg_cron` planifié.
 - L'action est bien due le jour même à 07:00 UTC et n'est pas coupée pour le profil courant.
+- Réglages > Notifications > Tester : confirme l'appareil sans attendre le cron (le push est envoyé à l'abonnement de cet appareil).
 
 ### Le build Cloudflare réussit mais l'application affiche l'écran de configuration
 

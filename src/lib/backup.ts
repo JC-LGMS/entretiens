@@ -33,6 +33,12 @@ async function blobBytes(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer())
 }
 
+const LAST_EXPORT_KEY = 'backup.lastExport'
+
+export function lastExportAt(): string | null {
+  return typeof localStorage === 'undefined' ? null : localStorage.getItem(LAST_EXPORT_KEY)
+}
+
 export async function exportBackup(): Promise<void> {
   const files: Record<string, Uint8Array> = {}
   const profiles = await db.profiles.toArray()
@@ -78,6 +84,7 @@ export async function exportBackup(): Promise<void> {
   link.href = url
   link.download = `entretiens-export-${new Date().toISOString().slice(0, 10)}.zip`
   link.click()
+  localStorage.setItem(LAST_EXPORT_KEY, new Date().toISOString())
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 

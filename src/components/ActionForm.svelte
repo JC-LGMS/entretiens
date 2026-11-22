@@ -24,35 +24,43 @@
     entityName,
     action,
     template,
+    duplicate,
     onclose
   }: {
     entityId: string
     entityName?: string
     action?: ActionRow
     template?: ActionTemplate
+    duplicate?: ActionRow
     onclose: () => void
   } = $props()
 
   type Mode = 'interval' | 'annual'
 
-  const initial = untrack(() => ({
-    label: action?.label ?? template?.label ?? '',
-    description: action?.description ?? template?.description ?? '',
-    value: action?.interval_value ?? template?.intervalValue ?? 1,
-    unit: action?.interval_unit ?? template?.intervalUnit ?? ('year' as IntervalUnit),
-    nextDue:
-      action?.next_due ??
-      (template
-        ? addInterval(todayISO(), template.intervalValue, template.intervalUnit)
-        : todayISO()),
-    active: action?.active ?? true,
-    mode: (action?.annual_dates?.length ? 'annual' : 'interval') as Mode,
-    annualDates: [...(action?.annual_dates ?? [])],
-    assigned: action?.assigned_profile_id ?? '',
-    lead: action?.notify_lead_days ?? 0,
-    repeat: action?.overdue_repeat_days ?? 1,
-    checklist: (action?.checklist ?? template?.checklist ?? []).join('\n')
-  }))
+  const initial = untrack(() => {
+    const source = action ?? duplicate
+    const value = source?.interval_value ?? template?.intervalValue ?? 1
+    const unit = source?.interval_unit ?? template?.intervalUnit ?? ('year' as IntervalUnit)
+    return {
+      label: source?.label ?? template?.label ?? '',
+      description: source?.description ?? template?.description ?? '',
+      value,
+      unit,
+      nextDue:
+        source && !duplicate
+          ? source.next_due
+          : source || template
+            ? addInterval(todayISO(), value, unit)
+            : todayISO(),
+      active: source?.active ?? true,
+      mode: (source?.annual_dates?.length ? 'annual' : 'interval') as Mode,
+      annualDates: [...(source?.annual_dates ?? [])],
+      assigned: source?.assigned_profile_id ?? '',
+      lead: source?.notify_lead_days ?? 0,
+      repeat: source?.overdue_repeat_days ?? 1,
+      checklist: (source?.checklist ?? template?.checklist ?? []).join('\n')
+    }
+  })
   let label = $state(initial.label)
   let description = $state(initial.description)
   let value = $state(initial.value)
